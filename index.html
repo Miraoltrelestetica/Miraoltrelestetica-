@@ -318,6 +318,7 @@ textarea{min-height:84px;resize:vertical}
     <div class="acts">
      <button class="bt" id="aBadgeBtn">Da confermare <span class="badge zero" id="aBadge">0</span></button>
      <button class="bt" id="aSuono">🔕 Attiva suoni</button>
+     <button class="bt" id="aClienti">Clienti</button>
      <button class="bt pri" id="aNuovo">+ Nuovo appuntamento</button>
      <button class="bt" id="aEsci">Esci</button>
     </div>
@@ -338,6 +339,7 @@ textarea{min-height:84px;resize:vertical}
   </div>
  </div>
  <div id="man" class="modal" hidden></div>
+ <div id="cli" class="modal" hidden></div>
 </div>
 
 <div class="calq" id="dlg" hidden role="dialog" aria-modal="true" style="z-index:90"><div><h3 id="dlgT"></h3><p id="dlgP"></p><div class="cqb"><button class="si" id="dlgOk"></button><button class="no" id="dlgNo"></button></div></div></div>
@@ -721,6 +723,58 @@ async function renderDet() {
   } else $('#dStorico').innerHTML = '<small>—</small>';
 }
 
+/* ---- Clienti: le schede nascono in automatico dalle prenotazioni (riconosciute dal numero di telefono) ---- */
+let CLI = null;
+async function caricaClienti() {
+  const [sa, sc] = await Promise.all([getDocs(collection(dbA, 'appointments')), getDocs(collection(dbA, 'clienti'))]);
+  const extra = {}; sc.docs.forEach(d => { extra[d.id] = d.data(); });
+  const M = {};
+  sa.docs.forEach(d => {
+    const x = d.data(), k = cifre(x.tel); if (!k) return;
+    const c = M[k] || (M[k] = { k, nome: x.nome, cognome: x.cognome, tel: x.tel, prima: x.data, ultimo: -1 });
+    if (x.data < c.prima) c.prima = x.data;
+    if ((x.creato || 0) >= c.ultimo) { c.ultimo = x.creato || 0; c.nome = x.nome; c.cognome = x.cognome; c.tel = x.tel; }
+  });
+  CLI = Object.values(M)
+    .filter(c => { const n = extra[c.k]; return !(n && n.eliminato && n.eliminato >= c.ultimo); }) // scheda eliminata: torna solo se la cliente prenota di nuovo
+    .map(c => ({ ...c, note: (extra[c.k] && extra[c.k].note) || '' }))
+    .sort((p, q) => (p.cognome + ' ' + p.nome).localeCompare(q.cognome + ' ' + q.nome, 'it'));
+}
+const dlA = s => new Date(s + 'T00:00').toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
+async function apriClienti() {
+  const m = $('#cli'); m.hidden = false;
+  m.innerHTML = '<div class="dc"><button class="ind" id="cX" style="padding-top:0">‹ Chiudi</button><h3>Clienti</h3><p class="hint">Caricamento…</p></div>';
+  $('#cX').onclick = () => { m.hidden = true; };
+  try { await caricaClienti(); } catch (e) { console.error(e); m.querySelector('.hint').textContent = 'Non riesco a caricare i clienti.'; return; }
+  elencoClienti('');
+}
+function elencoClienti(q) {
+  const m = $('#cli'), t = q.trim().toLowerCase(), k = cifre(q);
+  const L = CLI.filter(c => !t || (c.nome + ' ' + c.cognome).toLowerCase().includes(t) || (c.cognome + ' ' + c.nome).toLowerCase().includes(t) || (k && c.k.includes(k)));
+  m.innerHTML = `<div class="dc"><button class="ind" id="cX" style="padding-top:0">‹ Chiudi</button><h3>Clienti <small style="font:500 .9rem 'Hanken Grotesk',sans-serif;color:var(--mute)">${CLI.length}</small></h3>
+   <input id="cQ" type="search" placeholder="Cerca per nome o telefono" value="${esc(q)}" autocomplete="off" style="width:100%;margin:8px 0">
+   ${L.length ? L.map(c => `<button class="mini" data-k="${c.k}" style="display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);cursor:pointer;font:inherit;color:inherit"><b>${esc(c.cognome)} ${esc(c.nome)}</b> <small>${esc(c.tel)}</small></button>`).join('') : '<p class="hint">Nessuna cliente trovata.</p>'}</div>`;
+  $('#cX').onclick = () => { m.hidden = true; };
+  const inp = $('#cQ'); inp.oninput = () => { const p = inp.selectionStart; elencoClienti(inp.value); const n = $('#cQ'); n.focus(); n.setSelectionRange(p, p); };
+  $$('#cli [data-k]').forEach(b => b.onclick = () => schedaCliente(b.dataset.k, q));
+}
+function schedaCliente(k, q) {
+  const c = CLI.find(x => x.k === k), m = $('#cli'); if (!c) return elencoClienti(q || '');
+  const wa = 'Ciao ' + c.nome + '! 💗 Ti scriviamo da Mira – oltre l’estetica.';
+  m.innerHTML = `<div class="dc"><button class="ind" id="cB" style="padding-top:0">‹ Elenco clienti</button>
+   <h3>${esc(c.nome)} ${esc(c.cognome)}</h3><p>${esc(c.tel)}</p><p><small style="color:var(--mute)">Primo appuntamento: ${esc(dlA(c.prima))}</small></p>
+   <div class="two"><a class="bt pri" href="tel:${esc(c.tel.replace(/[^\d+]/g, ''))}">Chiama</a><a class="bt" href="https://wa.me/${waNum(c.tel)}?text=${encodeURIComponent(wa)}" target="_blank" rel="noopener">WhatsApp</a></div>
+   <label>Note private<textarea id="cN" placeholder="Allergie, preferenze…">${esc(c.note)}</textarea></label><button class="bt" id="cS">Salva note</button>
+   <div class="acts" style="margin-top:18px"><button class="bt no" id="cD">Elimina scheda cliente</button></div></div>`;
+  $('#cB').onclick = () => elencoClienti(q || '');
+  $('#cS').onclick = async () => { try { const note = $('#cN').value.trim(); await setDoc(doc(dbA, 'clienti', k), { nome: c.nome, cognome: c.cognome, tel: c.tel, note }, { merge: true }); c.note = note; toast('Note salvate'); } catch (e) { console.error(e); toast('Non riesco a salvare le note.'); } };
+  $('#cD').onclick = async () => {
+    if (!await chiedi('Eliminare la scheda cliente?', c.nome + ' ' + c.cognome + ' · le note private verranno cancellate. Gli appuntamenti restano in agenda. La scheda ricompare solo se la cliente prenota di nuovo.', 'Sì, elimina', 'No, tienila', true)) return;
+    try { await setDoc(doc(dbA, 'clienti', k), { eliminato: Date.now() }); CLI = CLI.filter(x => x.k !== k); toast('Scheda eliminata'); elencoClienti(''); }
+    catch (e) { console.error(e); toast('Non riesco a eliminare la scheda.'); }
+  };
+}
+
 /* Nuovo appuntamento manuale (telefono o negozio): nasce già confermato */
 function apriManuale() {
   let g = '', c = '';
@@ -734,7 +788,7 @@ function apriManuale() {
   $('#man').hidden = false;
   const agg = () => { const sv = SV[+$('#mSv').value]; $('#mOp').innerHTML = sv.ops.map(o => `<option value="${o}">${OPS[o]}</option>`).join(''); };
   agg(); $('#mSv').onchange = agg; $('#mX').onclick = () => $('#man').hidden = true;
-  $('#mT').onblur = async () => { const k = cifre($('#mT').value); if (k.length < 6 || ($('#mN').value && $('#mC').value)) return; try { const s = await getDoc(doc(dbA, 'clienti', k)); if (s.exists()) { $('#mN').value = s.data().nome || ''; $('#mC').value = s.data().cognome || ''; } } catch (e) {} };
+  $('#mT').onblur = async () => { const k = cifre($('#mT').value); if (k.length < 6 || ($('#mN').value && $('#mC').value)) return; try { if (!CLI) await caricaClienti(); const c = CLI.find(x => x.k === k); if (c && !($('#mN').value && $('#mC').value)) { $('#mN').value = c.nome || ''; $('#mC').value = c.cognome || ''; } } catch (e) {} };
   $('#mOk').onclick = async () => {
     const sv = SV[+$('#mSv').value], op = $('#mOp').value, data = $('#mD').value, ini = hmIn($('#mO').value), fin = ini == null ? 0 : ini + sv.min,
       nome = $('#mN').value.trim(), cognome = $('#mC').value.trim(), tel = $('#mT').value.trim(), err = $('#mErr');
@@ -749,7 +803,7 @@ function apriManuale() {
       b.set(ref, { uid: 'manuale', gruppo: ref.id, nome, cognome, tel, sv: sv.nome, op, data, inizio: ini, fine: fin, stato: 'confermato', creato: Date.now(), manuale: true });
       blocchi({ op, data, inizio: ini, fine: fin }).forEach(id => b.set(doc(dbA, 'busy', id), { data, op, m: +id.split('_')[2], aid: ref.id, uid: 'manuale' }));
       b.set(doc(dbA, 'clienti', cifre(tel)), { nome, cognome, tel }, { merge: true });
-      await b.commit(); DATA = data; $('#man').hidden = true; toast('Appuntamento salvato'); renderAgenda();
+      await b.commit(); CLI = null; DATA = data; $('#man').hidden = true; toast('Appuntamento salvato'); renderAgenda();
     } catch (e) { console.error(e); err.textContent = e.code === 'permission-denied' ? 'Orario occupato o permessi mancanti.' : 'Non riesco a salvare. Riprova.'; $('#mOk').disabled = false; }
   };
 }
@@ -829,12 +883,13 @@ $('#aEntra').onclick = async () => {
   $('#aEntra').disabled = false;
 };
 $('#aPass').onkeydown = e => { if (e.key === 'Enter') $('#aEntra').click(); };
-$('#aEsci').onclick = () => { unsubA && unsubA(); unsubA = null; SEL = null; signOut(authA); };
+$('#aEsci').onclick = () => { unsubA && unsubA(); unsubA = null; SEL = null; CLI = null; signOut(authA); };
 $('#aSuono').onclick = () => {
   if (!ctx) { try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { toast('Questo browser non supporta i suoni.'); return; } }
   ctx.resume(); suono = !suono; $('#aSuono').textContent = suono ? '🔔 Suoni attivi' : '🔕 Attiva suoni'; if (suono) bip();
 };
 $('#aNuovo').onclick = apriManuale;
+$('#aClienti').onclick = apriClienti;
 $('#aBadgeBtn').onclick = () => $('#pend').scrollIntoView({ behavior: 'smooth' });
 $('#dPrev').onclick = () => { const d = new Date(DATA + 'T00:00'); d.setDate(d.getDate() - 1); DATA = iso(d); renderAgenda(); };
 $('#dNext').onclick = () => { const d = new Date(DATA + 'T00:00'); d.setDate(d.getDate() + 1); DATA = iso(d); renderAgenda(); };
