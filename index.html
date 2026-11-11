@@ -118,10 +118,10 @@ h2{font-size:2.1rem;line-height:1.05;margin-bottom:14px}
 .cg{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
 .cg .wd{font-size:.8rem;font-weight:600;color:var(--mute);padding:6px 0}
 .cg button{aspect-ratio:1;border:0;border-radius:50%;background:none;font-weight:600;cursor:pointer;color:var(--ink)}
-.cg button:hover:not(:disabled){background:var(--soft)}
+@media(hover:hover){.cg button:hover:not(:disabled):not([aria-pressed="true"]){background:var(--soft)}}
 .cg button:disabled{opacity:.28;cursor:not-allowed;font-weight:400}
 .cg button.oggi{box-shadow:inset 0 0 0 1.5px var(--gold)}
-.cg button[aria-pressed="true"]{background:var(--acc);color:#fff}
+.cg button[aria-pressed="true"],.cg button[aria-pressed="true"]:not(:disabled){background:var(--acc);color:#fff}
 
 /* Moduli */
 label{display:block;font-weight:500;font-size:.88rem;color:var(--mute);margin:0 0 14px}
@@ -318,7 +318,6 @@ textarea{min-height:84px;resize:vertical}
     <div class="acts">
      <button class="bt" id="aBadgeBtn">Da confermare <span class="badge zero" id="aBadge">0</span></button>
      <button class="bt" id="aSuono">🔕 Attiva suoni</button>
-     <button class="bt" id="aRialli">Sblocca orari</button>
      <button class="bt pri" id="aNuovo">+ Nuovo appuntamento</button>
      <button class="bt" id="aEsci">Esci</button>
     </div>
@@ -585,8 +584,8 @@ $('#calApple').onclick = () => { if (ULTIMA) scaricaIcs(ULTIMA); };
 $('#calG').onclick = e => { e.preventDefault(); if (ULTIMA) apriGoogleCalendar(ULTIMA); };
 
 function renderMie() {
-  const oggi = iso(oggiD()), L = MIE.filter(x => x.data >= oggi).sort((a, b) => a.data.localeCompare(b.data) || a.inizio - b.inizio);
-  const B = { attesa: ['r', 'In attesa di conferma'], confermato: ['v', 'Confermato'], annullato: ['g', 'Annullato'] };
+  const oggi = iso(oggiD()), L = MIE.filter(x => x.data >= oggi && !(x.stato === 'annullato' && x.annullatoDa === 'cliente')).sort((a, b) => a.data.localeCompare(b.data) || a.inizio - b.inizio);
+  const B = { attesa: ['r', 'In attesa di conferma'], confermato: ['v', 'Confermato'], annullato: ['g', 'Annullato da Mira'] };
   $('#mie').innerHTML = L.length ? L.map(x => {
     const can = x.stato !== 'annullato' && x.data > oggi; // annullabile fino al giorno prima
     return `<div class="row"><div><b>${esc(x.sv)}</b><small>${esc(dl(x.data))}, ${hm(x.inizio)}–${hm(x.fine)} · ${OPS[x.op]}</small>${x.spostato && x.stato !== 'annullato' ? '<small>Appuntamento aggiornato da Mira</small>' : ''}${x.stato !== 'annullato' ? `<small>${IOS ? '' : `<a href="#" data-gcal="${x.id}">📅 Google Calendar</a> · `}<a href="#" data-ics="${x.id}">${ANDROID ? '📅 Altro calendario' : IOS ? '🍎 Calendario iPhone' : '🍎 Apple'}</a></small>` : ''}<span class="st ${B[x.stato][0]}">${B[x.stato][1]}</span></div>${can ? `<button class="x" data-id="${x.id}">Annulla</button>` : ''}</div>`;
@@ -716,25 +715,6 @@ async function renderDet() {
   } else $('#dStorico').innerHTML = '<small>—</small>';
 }
 
-/* Libera i blocchi di tempo rimasti senza un appuntamento attivo (controllando ogni volta lo stato vero sul server) */
-async function riallinea() {
-  const btn = $('#aRialli'); btn.disabled = true;
-  try {
-    const s = await getDocs(query(collection(dbA, 'busy'), where('data', '>=', iso(oggiD())))), perApp = {}, daLiberare = [], dettagli = [];
-    s.docs.forEach(d => (perApp[d.data().aid] = perApp[d.data().aid] || []).push(d));
-    for (const aid of Object.keys(perApp)) {
-      let a = A.find(x => x.id === aid);
-      if (!a || a.stato === 'annullato') { const g = await getDoc(doc(dbA, 'appointments', aid)); a = g.exists() ? { id: g.id, ...g.data() } : null; }
-      const validi = a && a.stato !== 'annullato' ? new Set(blocchi(a)) : new Set();
-      perApp[aid].forEach(d => { if (!validi.has(d.id)) { daLiberare.push(d.ref); dettagli.push(d.id); } });
-    }
-    for (let i = 0; i < daLiberare.length; i += 400) { const b = writeBatch(dbA); daLiberare.slice(i, i + 400).forEach(r => b.delete(r)); await b.commit(); }
-    toast(daLiberare.length ? 'Liberati ' + daLiberare.length + ' blocchi da 5 minuti rimasti per errore' : 'Tutto in ordine: nessun orario bloccato per errore');
-    console.log('blocchi liberati', dettagli);
-  } catch (e) { console.error(e); toast('Non riesco a controllare gli orari. Riprova.'); }
-  btn.disabled = false;
-}
-
 /* Nuovo appuntamento manuale (telefono o negozio): nasce già confermato */
 function apriManuale() {
   let g = '', c = '';
@@ -849,7 +829,6 @@ $('#aSuono').onclick = () => {
   ctx.resume(); suono = !suono; $('#aSuono').textContent = suono ? '🔔 Suoni attivi' : '🔕 Attiva suoni'; if (suono) bip();
 };
 $('#aNuovo').onclick = apriManuale;
-$('#aRialli').onclick = riallinea;
 $('#aBadgeBtn').onclick = () => $('#pend').scrollIntoView({ behavior: 'smooth' });
 $('#dPrev').onclick = () => { const d = new Date(DATA + 'T00:00'); d.setDate(d.getDate() - 1); DATA = iso(d); renderAgenda(); };
 $('#dNext').onclick = () => { const d = new Date(DATA + 'T00:00'); d.setDate(d.getDate() + 1); DATA = iso(d); renderAgenda(); };
