@@ -127,6 +127,17 @@ input:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 4px color-mix(
 .wrap{padding-bottom:110px}
 
 [hidden]{display:none!important}
+.alink{margin-left:auto;align-self:flex-start;font-size:.8rem;font-weight:700;color:var(--head);background:var(--surf);border:1.5px solid var(--line);padding:7px 12px;border-radius:999px;text-decoration:none;white-space:nowrap}
+.calbtn{display:block;width:100%;text-align:center;padding:13px;border-radius:999px;border:1.5px solid var(--acc);background:none;color:var(--acc);font-weight:700;cursor:pointer;text-decoration:none}
+.row small a{color:var(--acc);font-weight:700}
+.calq{position:fixed;inset:0;z-index:70;background:rgba(58,34,48,.5);display:flex;align-items:center;justify-content:center;padding:20px}
+.calq>div{background:var(--surf);border:1px solid var(--line);border-radius:22px;padding:24px 22px;max-width:380px;width:100%;text-align:center;box-shadow:0 20px 50px -10px rgba(58,34,48,.5)}
+.calq h3{margin:0 0 8px;font:500 1.4rem "Bodoni Moda",Georgia,serif;color:var(--head)}
+.calq p{margin:0 0 18px;color:var(--mute)}
+.calq .cqb{display:grid;gap:10px}
+.calq button{font:inherit;font-weight:700;padding:13px;border-radius:14px;border:1.5px solid var(--acc);cursor:pointer}
+.calq .si{background:var(--acc);color:#fff}
+.calq .no{background:none;color:var(--acc)}
 .foot{display:block;margin:34px auto 0;text-align:center;color:var(--mute);font-size:.85rem}
 textarea,select{display:block;width:100%;margin-top:6px;padding:12px 14px;font:inherit;font-size:1rem;color:var(--ink);background:var(--surf);border:1.5px solid var(--line);border-radius:14px}
 textarea{min-height:84px;resize:vertical}
@@ -209,6 +220,7 @@ textarea{min-height:84px;resize:vertical}
  <header class="top">
   <svg viewBox="0 0 100 100" aria-hidden="true"><defs><linearGradient id="g2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#D9628C"/><stop offset="1" stop-color="#B83F6B"/></linearGradient></defs><circle cx="50" cy="50" r="28" fill="none" stroke="#B8935A" stroke-width="3"/><circle cx="50" cy="50" r="17" fill="url(#g2)"/><circle cx="44" cy="43" r="4" fill="#FFECF3"/><circle cx="71.45" cy="32" r="8.2" fill="#FCE4ED"/><circle cx="71.45" cy="32" r="5.5" fill="#B8935A"/></svg>
   <div class="brand"><b>Mira</b><span>oltre l’estetica</span></div>
+  <a class="alink" href="#admin">Area riservata</a>
  </header>
  <p id="cErr" class="err" role="alert" hidden>Non riesco a collegarmi al sistema di prenotazione. Riprova tra poco.</p>
  <nav class="tabs"><button id="tP" aria-pressed="true">Prenota</button><button id="tM" aria-pressed="false">Le mie prenotazioni</button></nav>
@@ -230,12 +242,13 @@ textarea{min-height:84px;resize:vertical}
 
  <div id="p5" class="p" hidden><section><h2>Richiesta inviata</h2>
   <p class="hint">La tua prenotazione è in attesa di conferma. Quando Mira la conferma, in “Le mie prenotazioni” vedrai “Confermato”.</p>
+  <div id="calBox" hidden style="display:grid;gap:8px;margin:14px 0"><a class="calbtn" id="calG" target="_blank" rel="noopener">📅 Aggiungi a Google Calendar</a><button class="calbtn" id="calApple"></button></div>
   <button class="cta" id="b5">Vai a Le mie prenotazioni</button></section></div>
 
  <div id="pm" class="p" hidden><section><h2>Le mie prenotazioni</h2><div id="mie"></div>
   <p class="nota">Puoi annullare fino al giorno prima. Per modifiche dell’ultimo momento contattaci.</p></section></div>
- <a class="foot" href="#admin">Area riservata</a>
 </main>
+<div class="calq" id="calq" hidden role="dialog" aria-modal="true"><div><h3>Aggiungere al calendario?</h3><p id="calqTxt"></p><div class="cqb"><button class="si" id="calqSi">Sì, aggiungi a Google Calendar</button><button id="calqAltro" hidden style="background:none;color:var(--ink);border-color:var(--line)">Uso un altro calendario (Samsung…)</button><button class="no" id="calqNo">No, grazie</button></div></div></div>
 <div id="barra" hidden><span id="btxt"></span><button class="cta" id="b1">Continua</button></div>
 </div>
 
@@ -304,7 +317,8 @@ const firebaseConfig = {
   appId: "1:435139736564:web:0a53f789f77902b366bfa1"
 };
 const ADMIN_UID = 'nIeROc5fGAbNzGQOHRJxRk4jM8m2'; // titolare
-const app = initializeApp(firebaseConfig), auth = getAuth(app), db = getFirestore(app);
+const app = initializeApp(firebaseConfig), auth = getAuth(app), db = getFirestore(app);            // cliente (accesso anonimo)
+const appA = initializeApp(firebaseConfig, 'titolare'), authA = getAuth(appA), dbA = getFirestore(appA); // titolare (email e password), separato
 
 /* ===== Dati del salone ===== */
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
@@ -339,8 +353,8 @@ function toast(t) { const e = document.createElement('div'); e.className = 'toas
 const fineAvvio = () => { try { window.miraPronta && window.miraPronta(); } catch (e) {} };
 
 /* ===== Utente: ogni visitatrice ha un accesso anonimo invisibile; la titolare entra con email e password ===== */
-let U = null, unsubM = null, unsubA = null;
-const isAdmin = () => !!U && !U.isAnonymous && U.uid === ADMIN_UID;
+let U = null, UA = null, unsubM = null, unsubA = null;
+const isAdmin = () => !!UA && UA.uid === ADMIN_UID;
 
 /* ===================================================== LATO CLIENTE ===================================================== */
 const S = { sel: [], data: null, ora: null, sc: [], occ: new Set(), mese: oggiD() }; S.mese.setDate(1);
@@ -431,20 +445,73 @@ async function invia() {
     }
     await batch.commit();
     try { localStorage.setItem('mira_dati', JSON.stringify({ nome, cognome, tel })); } catch (e) {}
+    ULTIMA = { id: gid, sv: pl.map(p => p.sv.nome).join(' + '), data: S.data, ini: pl[0].ini, fin: pl[pl.length - 1].fin,
+      desc: pl.map((p, i) => hm(p.ini) + '-' + hm(p.fin) + ' ' + p.sv.nome + ' (' + (S.sc[i] === 'q' ? 'operatrice da confermare' : OPS[S.sc[i]]) + ')').join('\n') + '\nAppuntamento prenotato online.' };
+    $('#calG').href = gcalUrl(ULTIMA);
     S.sel = []; S.data = S.ora = null; renderSv(); vai(5);
+    setTimeout(() => chiediCalendario(ULTIMA), 500);
   } catch (e) {
     console.error(e);
     err.textContent = e.code === 'permission-denied' ? 'Quell’orario è stato appena occupato da un’altra cliente. Torna indietro e scegline un altro.' : 'Non riesco a inviare la richiesta. Controlla la connessione e riprova.';
   }
   btn.disabled = false;
 }
+/* ---- Aggiungi al calendario (sistema collaudato di Nails & Makeup, adattato a Mira) ---- */
+const ANDROID = /Android/i.test(navigator.userAgent);
+const IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.userAgent.includes('Macintosh') && navigator.maxTouchPoints > 1);
+const ETI_ALTRO = ANDROID ? '📅 Calendario del telefono (Samsung, altri)' : IOS ? '🍎 Aggiungi al Calendario dell’iPhone' : '🍎 Aggiungi a Calendario Apple';
+const calDT = (data, min) => { const [y, m, d] = data.split('-').map(Number), t = new Date(y, m - 1, d, 0, min); return '' + t.getFullYear() + pad(t.getMonth() + 1) + pad(t.getDate()) + 'T' + pad(t.getHours()) + pad(t.getMinutes()) + '00'; };
+const calEsc = t => String(t).replace(/([,;\\])/g, '\\$1').replace(/\n/g, '\\n');
+const evDaApp = x => ({ id: x.id, sv: x.sv, data: x.data, ini: x.inizio, fin: x.fine, desc: 'Operatrice: ' + OPS[x.op] + '. Appuntamento prenotato online.' });
+const gcalUrl = ev => 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent(ev.sv + ' – Mira') + '&dates=' + calDT(ev.data, ev.ini) + '/' + calDT(ev.data, ev.fin) + '&ctz=Europe%2FRome&details=' + encodeURIComponent(ev.desc);
+/* Apre l'APP Google Calendar: su Android con un intent (se l'app non c'è ripiega sul Play Store), su iPhone con il link nella stessa scheda */
+function apriGoogleCalendar(ev) {
+  const web = gcalUrl(ev), q = encodeURIComponent;
+  if (ANDROID) {
+    location.href = 'intent://www.google.com/calendar/event?action=TEMPLATE&text=' + q(ev.sv + ' – Mira') + '&dates=' + calDT(ev.data, ev.ini) + '/' + calDT(ev.data, ev.fin) + '&ctz=Europe%2FRome&details=' + q(ev.desc)
+      + '#Intent;scheme=https;package=com.google.android.calendar;S.browser_fallback_url=' + q('https://play.google.com/store/apps/details?id=com.google.android.calendar') + ';end';
+  } else if (IOS) { location.href = web; }
+  else { window.open(web, '_blank', 'noopener') || (location.href = web); }
+}
+function icsEv(ev) {
+  const n = new Date(), st = '' + n.getUTCFullYear() + pad(n.getUTCMonth() + 1) + pad(n.getUTCDate()) + 'T' + pad(n.getUTCHours()) + pad(n.getUTCMinutes()) + pad(n.getUTCSeconds()) + 'Z';
+  return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Mira//IT', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'BEGIN:VEVENT', 'UID:mira-' + ev.id + '@miraoltrelestetica', 'DTSTAMP:' + st, 'DTSTART:' + calDT(ev.data, ev.ini), 'DTEND:' + calDT(ev.data, ev.fin), 'SUMMARY:' + calEsc(ev.sv + ' – Mira'), 'DESCRIPTION:' + calEsc(ev.desc), 'BEGIN:VALARM', 'TRIGGER:-P1D', 'ACTION:DISPLAY', 'DESCRIPTION:Promemoria appuntamento', 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n') + '\r\n';
+}
+function scaricaIcs(ev) {
+  const u = URL.createObjectURL(new Blob([icsEv(ev)], { type: 'text/calendar;charset=utf-8' })), a = document.createElement('a');
+  a.href = u; if (!IOS) a.download = 'appuntamento.ics'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(u); a.remove(); }, 60000);
+}
+let ULTIMA = null;
+function chiediCalendario(ev) {
+  const quando = dl(ev.data) + ' alle ' + hm(ev.ini);
+  $('#calqNo').onclick = () => { $('#calq').hidden = true; };
+  if (IOS) {
+    $('#calqTxt').textContent = 'Vuoi aggiungere l’appuntamento di ' + quando + ' al Calendario dell’iPhone? Si apre già con data e ora inserite: ti basta premere Aggiungi.';
+    $('#calqSi').textContent = 'Sì, aggiungi al Calendario'; $('#calqAltro').hidden = true;
+    $('#calqSi').onclick = () => { $('#calq').hidden = true; scaricaIcs(ev); };
+    $('#calq').hidden = false; return;
+  }
+  $('#calqTxt').textContent = 'Vuoi aggiungere l’appuntamento di ' + quando + ' a Google Calendar? Si apre già con data e ora inserite: ti basta premere Salva.' + (ANDROID ? ' Se non hai l’app Google Calendar, scegli “Uso un altro calendario”.' : '');
+  $('#calqSi').textContent = 'Sì, aggiungi a Google Calendar';
+  $('#calq').hidden = false;
+  $('#calqSi').onclick = () => { $('#calq').hidden = true; apriGoogleCalendar(ev); };
+  $('#calqAltro').hidden = !ANDROID;
+  $('#calqAltro').onclick = () => { $('#calq').hidden = true; scaricaIcs(ev); };
+}
+$('#calApple').textContent = ETI_ALTRO;
+if (IOS) $('#calG').style.display = 'none';
+$('#calApple').onclick = () => { if (ULTIMA) scaricaIcs(ULTIMA); };
+$('#calG').onclick = e => { e.preventDefault(); if (ULTIMA) apriGoogleCalendar(ULTIMA); };
+
 function renderMie() {
   const oggi = iso(oggiD()), L = MIE.filter(x => x.data >= oggi).sort((a, b) => a.data.localeCompare(b.data) || a.inizio - b.inizio);
   const B = { attesa: ['r', 'In attesa di conferma'], confermato: ['v', 'Confermato'], annullato: ['g', 'Annullato'] };
   $('#mie').innerHTML = L.length ? L.map(x => {
     const can = x.stato !== 'annullato' && x.data > oggi; // annullabile fino al giorno prima
-    return `<div class="row"><div><b>${esc(x.sv)}</b><small>${esc(dl(x.data))}, ${hm(x.inizio)}–${hm(x.fine)} · ${OPS[x.op]}</small>${x.spostato && x.stato !== 'annullato' ? '<small>Appuntamento aggiornato da Mira</small>' : ''}<span class="st ${B[x.stato][0]}">${B[x.stato][1]}</span></div>${can ? `<button class="x" data-id="${x.id}">Annulla</button>` : ''}</div>`;
+    return `<div class="row"><div><b>${esc(x.sv)}</b><small>${esc(dl(x.data))}, ${hm(x.inizio)}–${hm(x.fine)} · ${OPS[x.op]}</small>${x.spostato && x.stato !== 'annullato' ? '<small>Appuntamento aggiornato da Mira</small>' : ''}${x.stato !== 'annullato' ? `<small>${IOS ? '' : `<a href="#" data-gcal="${x.id}">📅 Google Calendar</a> · `}<a href="#" data-ics="${x.id}">${ANDROID ? '📅 Altro calendario' : IOS ? '🍎 Calendario iPhone' : '🍎 Apple'}</a></small>` : ''}<span class="st ${B[x.stato][0]}">${B[x.stato][1]}</span></div>${can ? `<button class="x" data-id="${x.id}">Annulla</button>` : ''}</div>`;
   }).join('') : '<p class="hint">Non hai prenotazioni in programma.</p>';
+  $$('#mie [data-gcal]').forEach(k => k.onclick = e => { e.preventDefault(); const x = MIE.find(z => z.id === k.dataset.gcal); if (x) apriGoogleCalendar(evDaApp(x)); });
+  $$('#mie [data-ics]').forEach(k => k.onclick = e => { e.preventDefault(); const x = MIE.find(z => z.id === k.dataset.ics); if (x) scaricaIcs(evDaApp(x)); });
   $$('#mie .x').forEach(b => b.onclick = async () => {
     const x = MIE.find(z => z.id === b.dataset.id); if (!x || !confirm('Vuoi annullare questa prenotazione?')) return;
     b.disabled = true;
@@ -478,7 +545,7 @@ function bip() {
 function avviaAdmin() {
   unsubA && unsubA(); A = []; primoCarico = true;
   const da = new Date(); da.setDate(da.getDate() - 30);
-  unsubA = onSnapshot(query(collection(db, 'appointments'), where('data', '>=', iso(da))), s => {
+  unsubA = onSnapshot(query(collection(dbA, 'appointments'), where('data', '>=', iso(da))), s => {
     if (!primoCarico) s.docChanges().forEach(c => { if (c.type === 'added' && c.doc.data().stato === 'attesa' && !c.doc.metadata.hasPendingWrites) { bip(); toast('Nuova prenotazione da confermare'); } });
     primoCarico = false;
     A = s.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -514,10 +581,10 @@ function renderAgenda() {
 }
 function apri(id) { SEL = id; renderDet(); renderAgenda(); if (innerWidth >= 1100) $('#det').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
 function chiudiDet() { SEL = null; $('#det').hidden = true; renderAgenda(); }
-async function conferma(id) { try { const b = writeBatch(db); b.update(doc(db, 'appointments', id), { stato: 'confermato' }); await b.commit(); toast('Confermato'); } catch (e) { console.error(e); toast('Non riesco a confermare. Riprova.'); } }
+async function conferma(id) { try { const b = writeBatch(dbA); b.update(doc(dbA, 'appointments', id), { stato: 'confermato' }); await b.commit(); toast('Confermato'); } catch (e) { console.error(e); toast('Non riesco a confermare. Riprova.'); } }
 async function annullaA(a) {
   if (!confirm('Annullare questo appuntamento? Lo slot tornerà libero.')) return;
-  try { const b = writeBatch(db); b.update(doc(db, 'appointments', a.id), { stato: 'annullato', annullatoDa: 'titolare' }); blocchi(a).forEach(id => b.delete(doc(db, 'busy', id))); await b.commit(); toast('Annullato'); chiudiDet(); }
+  try { const b = writeBatch(dbA); b.update(doc(dbA, 'appointments', a.id), { stato: 'annullato', annullatoDa: 'titolare' }); blocchi(a).forEach(id => b.delete(doc(dbA, 'busy', id))); await b.commit(); toast('Annullato'); chiudiDet(); }
   catch (e) { console.error(e); toast('Non riesco ad annullare. Riprova.'); }
 }
 async function muovi(a, op, data, ini) { // sposta e/o cambia operatrice; resta confermato in automatico
@@ -527,10 +594,10 @@ async function muovi(a, op, data, ini) { // sposta e/o cambia operatrice; resta 
   if (!apertura(new Date(data + 'T00:00'))) throw new Error('Quel giorno il salone è chiuso.');
   if (ini < 540 || fin > chiusura(data)) throw new Error('L’orario esce dall’apertura del salone.');
   if (occupatoA(op, data, ini, fin, a.id)) throw new Error(OPS[op] + ' è già occupata in quell’orario.');
-  const vecchi = new Set(blocchi(a)), nuovi = blocchi(a, op, data, ini, fin), b = writeBatch(db);
-  vecchi.forEach(id => { if (!nuovi.includes(id)) b.delete(doc(db, 'busy', id)); });
-  nuovi.forEach(id => { if (!vecchi.has(id)) { const [d, o, m] = id.split('_'); b.set(doc(db, 'busy', id), { data: d, op: o, m: +m, aid: a.id, uid: a.uid }); } });
-  b.update(doc(db, 'appointments', a.id), { data, op, inizio: ini, fine: fin, stato: 'confermato', spostato: true });
+  const vecchi = new Set(blocchi(a)), nuovi = blocchi(a, op, data, ini, fin), b = writeBatch(dbA);
+  vecchi.forEach(id => { if (!nuovi.includes(id)) b.delete(doc(dbA, 'busy', id)); });
+  nuovi.forEach(id => { if (!vecchi.has(id)) { const [d, o, m] = id.split('_'); b.set(doc(dbA, 'busy', id), { data: d, op: o, m: +m, aid: a.id, uid: a.uid }); } });
+  b.update(doc(dbA, 'appointments', a.id), { data, op, inizio: ini, fine: fin, stato: 'confermato', spostato: true });
   await b.commit(); DATA = data;
 }
 async function renderDet() {
@@ -557,10 +624,10 @@ async function renderDet() {
   if ($('#dSposta')) $('#dSposta').onclick = async () => { try { await muovi(a, a.op, $('#dSd').value, hmIn($('#dSo').value)); toast('Spostato'); } catch (e) { toast(e.message || 'Non riesco a spostare.'); console.error(e); } };
   if ($('#dCambia')) $('#dCambia').onclick = async () => { try { await muovi(a, $('#dOp').value, a.data, a.inizio); toast('Operatrice cambiata'); } catch (e) { toast(e.message || 'Non riesco a cambiare.'); console.error(e); } };
   const chiave = cifre(tel);
-  $('#dSalva').onclick = async () => { if (!chiave) return toast('Manca il numero di telefono.'); try { await setDoc(doc(db, 'clienti', chiave), { nome: a.nome, cognome: a.cognome, tel, note: $('#dNote').value.trim() }, { merge: true }); toast('Note salvate'); } catch (e) { console.error(e); toast('Non riesco a salvare le note.'); } };
+  $('#dSalva').onclick = async () => { if (!chiave) return toast('Manca il numero di telefono.'); try { await setDoc(doc(dbA, 'clienti', chiave), { nome: a.nome, cognome: a.cognome, tel, note: $('#dNote').value.trim() }, { merge: true }); toast('Note salvate'); } catch (e) { console.error(e); toast('Non riesco a salvare le note.'); } };
   if (chiave) {
-    getDoc(doc(db, 'clienti', chiave)).then(s => { if (SEL === a.id && $('#dNote') && s.exists()) $('#dNote').value = s.data().note || ''; }).catch(() => {});
-    getDocs(query(collection(db, 'appointments'), where('tel', '==', tel))).then(s => {
+    getDoc(doc(dbA, 'clienti', chiave)).then(s => { if (SEL === a.id && $('#dNote') && s.exists()) $('#dNote').value = s.data().note || ''; }).catch(() => {});
+    getDocs(query(collection(dbA, 'appointments'), where('tel', '==', tel))).then(s => {
       if (SEL !== a.id || !$('#dStorico')) return;
       const L = s.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => x.id !== a.id).sort((p, q) => q.data.localeCompare(p.data) || q.inizio - p.inizio).slice(0, 12);
       $('#dStorico').innerHTML = L.length ? L.map(x => `<div class="mini"><b>${esc(x.sv)}</b> <small>${esc(dl(x.data))}, ${hm(x.inizio)} · ${OPS[x.op]} · ${x.stato}</small></div>`).join('') : '<small>Nessun altro appuntamento.</small>';
@@ -581,7 +648,7 @@ function apriManuale() {
   $('#man').hidden = false;
   const agg = () => { const sv = SV[+$('#mSv').value]; $('#mOp').innerHTML = sv.ops.map(o => `<option value="${o}">${OPS[o]}</option>`).join(''); };
   agg(); $('#mSv').onchange = agg; $('#mX').onclick = () => $('#man').hidden = true;
-  $('#mT').onblur = async () => { const k = cifre($('#mT').value); if (k.length < 6 || ($('#mN').value && $('#mC').value)) return; try { const s = await getDoc(doc(db, 'clienti', k)); if (s.exists()) { $('#mN').value = s.data().nome || ''; $('#mC').value = s.data().cognome || ''; } } catch (e) {} };
+  $('#mT').onblur = async () => { const k = cifre($('#mT').value); if (k.length < 6 || ($('#mN').value && $('#mC').value)) return; try { const s = await getDoc(doc(dbA, 'clienti', k)); if (s.exists()) { $('#mN').value = s.data().nome || ''; $('#mC').value = s.data().cognome || ''; } } catch (e) {} };
   $('#mOk').onclick = async () => {
     const sv = SV[+$('#mSv').value], op = $('#mOp').value, data = $('#mD').value, ini = hmIn($('#mO').value), fin = ini == null ? 0 : ini + sv.min,
       nome = $('#mN').value.trim(), cognome = $('#mC').value.trim(), tel = $('#mT').value.trim(), err = $('#mErr');
@@ -592,10 +659,10 @@ function apriManuale() {
     if (occupatoA(op, data, ini, fin)) { err.textContent = OPS[op] + ' è già occupata in quell’orario.'; return; }
     err.textContent = ''; $('#mOk').disabled = true;
     try {
-      const ref = doc(collection(db, 'appointments')), b = writeBatch(db);
+      const ref = doc(collection(dbA, 'appointments')), b = writeBatch(dbA);
       b.set(ref, { uid: 'manuale', gruppo: ref.id, nome, cognome, tel, sv: sv.nome, op, data, inizio: ini, fine: fin, stato: 'confermato', creato: Date.now(), manuale: true });
-      blocchi({ op, data, inizio: ini, fine: fin }).forEach(id => b.set(doc(db, 'busy', id), { data, op, m: +id.split('_')[2], aid: ref.id, uid: 'manuale' }));
-      b.set(doc(db, 'clienti', cifre(tel)), { nome, cognome, tel }, { merge: true });
+      blocchi({ op, data, inizio: ini, fine: fin }).forEach(id => b.set(doc(dbA, 'busy', id), { data, op, m: +id.split('_')[2], aid: ref.id, uid: 'manuale' }));
+      b.set(doc(dbA, 'clienti', cifre(tel)), { nome, cognome, tel }, { merge: true });
       await b.commit(); DATA = data; $('#man').hidden = true; toast('Appuntamento salvato'); renderAgenda();
     } catch (e) { console.error(e); err.textContent = e.code === 'permission-denied' ? 'Orario occupato o permessi mancanti.' : 'Non riesco a salvare. Riprova.'; $('#mOk').disabled = false; }
   };
@@ -614,12 +681,12 @@ $('#aEntra').onclick = async () => {
   const em = $('#aEmail').value.trim(), pw = $('#aPass').value, err = $('#aErr'); err.textContent = '';
   if (!em || !pw) { err.textContent = 'Inserisci email e password.'; return; }
   $('#aEntra').disabled = true;
-  try { await signInWithEmailAndPassword(auth, em, pw); }
+  try { await signInWithEmailAndPassword(authA, em, pw); }
   catch (e) { console.error(e); err.textContent = ['auth/invalid-credential', 'auth/wrong-password', 'auth/user-not-found', 'auth/invalid-email'].includes(e.code) ? 'Email o password non corrette.' : 'Accesso non riuscito (' + (e.code || 'errore') + ').'; }
   $('#aEntra').disabled = false;
 };
 $('#aPass').onkeydown = e => { if (e.key === 'Enter') $('#aEntra').click(); };
-$('#aEsci').onclick = () => { unsubA && unsubA(); unsubA = null; SEL = null; signOut(auth); };
+$('#aEsci').onclick = () => { unsubA && unsubA(); unsubA = null; SEL = null; signOut(authA); };
 $('#aSuono').onclick = () => {
   if (!ctx) { try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { toast('Questo browser non supporta i suoni.'); return; } }
   ctx.resume(); suono = !suono; $('#aSuono').textContent = suono ? '🔔 Suoni attivi' : '🔕 Attiva suoni'; if (suono) bip();
@@ -641,12 +708,14 @@ function route() {
 }
 addEventListener('hashchange', route);
 
-onAuthStateChanged(auth, async u => {
-  if (!u) { try { await signInAnonymously(auth); } catch (e) { console.error('accesso anonimo', e); $('#cErr').hidden = false; fineAvvio(); } return; }
-  U = u; unsubM && unsubM(); unsubM = null;
-  if (isAdmin()) { avviaAdmin(); } else { unsubA && unsubA(); unsubA = null; A = []; avviaCliente(); }
-  $('#cErr').hidden = true;
-  route(); fineAvvio();
+onAuthStateChanged(auth, async u => { // cliente
+  if (!u) { try { await signInAnonymously(auth); } catch (e) { console.error('accesso anonimo', e); $('#cErr').textContent = 'Non riesco a collegarmi al sistema di prenotazione. Codice errore: ' + (e.code || e.message || 'sconosciuto'); $('#cErr').hidden = false; fineAvvio(); } return; }
+  U = u; $('#cErr').hidden = true; avviaCliente(); fineAvvio();
+});
+onAuthStateChanged(authA, u => { // titolare
+  UA = u;
+  if (isAdmin()) avviaAdmin(); else { unsubA && unsubA(); unsubA = null; A = []; if (u) signOut(authA); }
+  route();
 });
 renderSv(); vai(1); route();
 setTimeout(fineAvvio, 6000); // se Firebase non risponde, la splash non resta bloccata
