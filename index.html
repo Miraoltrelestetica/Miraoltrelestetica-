@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mira – oltre l’estetica</title>
 <meta name="description" content="Prenota online il tuo appuntamento da Mira – oltre l’estetica.">
-<meta name="theme-color" content="#FFF5F8">
+<meta name="theme-color" content="#FDF2F5">
 <meta name="color-scheme" content="light">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
@@ -16,131 +16,166 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,wght@0,500;0,700;1,500&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
- --bg:#FFF5F8;--surf:#fff;--ink:#3A2230;--mute:#876876;--line:#F3DCE5;--soft:#FBE3EC;
- --head:#7A2B4F;--acc:#B83F6B;--acc2:#D9628C;--gold:#B8935A;--ok:#2F7D5B;--wait:#C73B4A;
- --sh:0 1px 2px rgba(122,43,79,.06),0 12px 28px -16px rgba(122,43,79,.3);
- --glow:radial-gradient(70% 40% at 100% 0%,#FBDDE8 0,transparent 70%),radial-gradient(55% 30% at 0% 30%,#FDEBD9 0,transparent 70%);
+ --bg:#FDF2F5;--surf:#fff;--ink:#2B1A25;--mute:#86707B;--line:#F2DDE5;--soft:#FAE4EC;
+ --head:#3A1B2E;--acc:#C93C6E;--acc2:#E2678F;--gold:#B58E5E;--ok:#2E7D5A;--wait:#D13B4B;
+ --sh:0 1px 2px rgba(58,27,46,.05),0 14px 30px -18px rgba(58,27,46,.28);
  --fs:16px;
  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 *,*::before,*::after{box-sizing:inherit}
 html{background:var(--bg);scroll-padding-top:env(safe-area-inset-top,0px);font-size:var(--fs)}
-body{margin:0;min-height:100vh;background:var(--glow) no-repeat,var(--bg);color:var(--ink);font:400 1rem/1.5 "DM Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
-h1,h2{font-family:"Bodoni Moda",Georgia,serif;color:var(--head);font-weight:500;margin:0}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font:400 1rem/1.5 "Hanken Grotesk",system-ui,sans-serif;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+h1,h2,h3{font-family:"Instrument Serif",Georgia,serif;color:var(--head);font-weight:400;margin:0}
 button{font:inherit;color:inherit}
-button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+button:focus-visible,a:focus-visible{outline:3px solid var(--acc2);outline-offset:2px}
+[hidden]{display:none!important}
 
-/* Layout: telefono (1 colonna) → tablet → PC fino a 32". Il testo cresce con lo schermo. */
-.wrap{width:100%;max-width:560px;margin:0 auto;padding:0 18px 56px}
-@media(min-width:820px){.wrap{max-width:860px;padding:0 32px 72px}}
-@media(min-width:1500px){:root{--fs:18px}.wrap{max-width:1200px}}
-@media(min-width:2200px){:root{--fs:22px}.wrap{max-width:1560px}}
+/* Layout: telefono → tablet → PC fino a 32". Il testo cresce con lo schermo. */
+#cli{position:relative;overflow-x:clip}
+.wrap{position:relative;z-index:1;width:100%;max-width:560px;margin:0 auto;padding:0 18px 120px}
+@media(min-width:820px){.wrap{max-width:900px;padding:0 32px 130px}}
+@media(min-width:1200px){.wrap{max-width:1120px}}
+@media(min-width:1500px){:root{--fs:18px}.wrap{max-width:1280px}}
+@media(min-width:2200px){:root{--fs:22px}.wrap{max-width:1700px}}
 
-.top{display:flex;align-items:center;gap:12px;padding:20px 0 6px}
-.top svg{width:44px;height:44px;flex:none}
+/* Orbita: l'unico elemento decorativo */
+.orbita{position:absolute;z-index:0;top:-150px;right:-190px;width:340px;height:340px;pointer-events:none;opacity:.8}
+.orbita .giro{transform-origin:170px 170px;animation:gira 70s linear infinite}
+@keyframes gira{to{transform:rotate(360deg)}}
+@media(min-width:820px){.orbita{right:max(-60px,calc(50% - 560px));top:-60px;width:460px;height:460px}.orbita .giro{transform-origin:230px 230px}}
+@media(prefers-reduced-motion:reduce){.orbita .giro{animation:none}}
+
+.top{display:flex;align-items:center;gap:11px;padding:18px 0 4px}
+.top>svg{width:38px;height:38px;flex:none}
 .brand{display:flex;flex-direction:column;line-height:1}
-.brand b{font:italic 500 1.9rem/1 "Bodoni Moda",Georgia,serif;color:var(--head)}
-.brand span{margin-top:5px;font-size:.78rem;color:var(--gold);font-weight:500;letter-spacing:.04em}
+.brand b{font:italic 400 2rem/.95 "Instrument Serif",Georgia,serif;color:var(--head)}
+.brand span{margin-top:3px;font-size:.74rem;color:var(--gold);font-weight:500;letter-spacing:.02em}
+.top .ind{margin-left:auto;padding:8px 4px;font-size:.92rem}
+.alink{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:var(--surf);border:1.5px solid var(--line);color:var(--head);flex:none}
+.alink svg{width:17px;height:17px}
 
-.hero{margin:18px 0 6px;padding:28px 24px;border-radius:28px;background:linear-gradient(140deg,#FCE4ED 0%,#F8CFDD 100%);border:1px solid var(--line);box-shadow:var(--sh)}
-.hero h1{font-size:clamp(2rem,8vw,3.2rem);line-height:1.05}
-.hero p{margin:12px 0 0;color:var(--mute);max-width:34ch}
+.hero{padding:26px 0 6px}
+.hero #cChi{margin:0 0 6px;color:var(--acc);font-weight:600;font-size:.95rem;min-height:1.4em}
+.hero h1{font-size:clamp(2.6rem,11vw,4.2rem);line-height:1;letter-spacing:-.012em;max-width:14ch}
+.hero .sub{margin:14px 0 0;color:var(--mute);max-width:36ch}
 
-section{padding:26px 2px 4px}
-h2{font-size:1.6rem;margin-bottom:14px}
-h2::before{content:"";display:block;width:30px;height:2px;margin-bottom:12px;background:linear-gradient(90deg,var(--gold),transparent)}
-.lista{display:grid;gap:12px}
-@media(min-width:820px){.lista{grid-template-columns:repeat(2,1fr)}}
-@media(min-width:1500px){.lista{grid-template-columns:repeat(3,1fr)}}
-.sv{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:var(--surf);border:1.5px solid var(--line);border-radius:20px;padding:14px 16px;cursor:pointer;box-shadow:var(--sh);transition:border-color .18s,background .18s,transform .12s}
-.sv:active{transform:scale(.985)}
-.sv i{width:12px;height:42px;border-radius:8px 8px 3px 3px;flex:none;background:linear-gradient(180deg,var(--acc2),var(--acc));box-shadow:inset 0 -7px 0 rgba(184,147,90,.55)}
-.sv b{display:block;font-weight:700}
-.sv small{color:var(--mute)}
-.sv .d{margin-left:auto;font-size:.88rem;white-space:nowrap;color:var(--head);background:var(--soft);padding:4px 10px;border-radius:999px}
-.sv[aria-pressed="true"]{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 8%,var(--surf));box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 18%,transparent),var(--sh)}
-.slots{display:flex;gap:9px;flex-wrap:wrap}
-.slot{padding:11px 18px;border-radius:999px;background:var(--surf);border:1.5px solid var(--line);font-weight:500;cursor:pointer}
-.slot[aria-pressed="true"]{background:linear-gradient(135deg,var(--acc),var(--acc2));border-color:transparent;color:#fff}
-.stati{display:flex;gap:10px;flex-wrap:wrap}
-.st{padding:6px 12px;border-radius:999px;font-size:.88rem;font-weight:700}
-.st.r{background:#FDE4E6;color:var(--wait);border:1.5px solid var(--wait)}
-.st.v{background:#DDF1E7;color:var(--ok);border:1.5px solid var(--ok)}
-.cta{display:block;width:100%;max-width:420px;margin:26px auto 0;padding:17px;border:0;border-radius:999px;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;font-weight:700;font-size:1.05rem;cursor:pointer;box-shadow:0 14px 26px -12px var(--acc)}
-.nota{margin:28px 0 0;color:var(--mute);font-size:.9rem;text-align:center}
+.tabs{display:flex;margin:22px 0 4px;padding:4px;background:var(--soft);border-radius:999px}
+.tabs button{flex:1;padding:11px 8px;border:0;border-radius:999px;background:none;font-weight:600;font-size:.95rem;color:var(--mute);cursor:pointer;transition:background .2s,color .2s}
+.tabs button[aria-pressed="true"]{background:var(--surf);color:var(--head);box-shadow:0 2px 8px -2px rgba(58,27,46,.2)}
+.p[hidden]{display:none}
+section{padding:22px 0 4px}
+h2{font-size:2.1rem;line-height:1.05;margin-bottom:14px}
+.ind{background:none;border:0;color:var(--acc);font-weight:600;padding:12px 0 0;cursor:pointer}
+.hint{color:var(--mute);margin:0 0 14px}
+.gl{margin:20px 0 10px;color:var(--mute);font-weight:600;font-size:.9rem;grid-column:1/-1}
+
+/* Trattamenti: elenchi puliti, un pannello per categoria */
+#lsv{margin-top:2px}
+@media(min-width:900px){#lsv{columns:2;column-gap:30px}}
+@media(min-width:1500px){#lsv{columns:3}}
+.cat{break-inside:avoid;margin:0 0 26px}
+.cat h3{font-size:1.75rem;line-height:1.1;margin:0 0 10px 2px}
+.rows{background:var(--surf);border-radius:24px;overflow:hidden;box-shadow:var(--sh)}
+.sv{display:flex;align-items:center;gap:14px;width:100%;padding:16px 18px;background:none;border:0;border-top:1px solid var(--line);text-align:left;cursor:pointer;transition:background .15s}
+.sv:first-child{border-top:0}
+.sv:active{background:var(--soft)}
+.sv .t{flex:1;min-width:0}
+.sv .t b{display:block;font-weight:600;line-height:1.25}
+.sv small{color:var(--mute);font-size:.85rem}
+.sv .d{color:var(--mute);font-size:.9rem;white-space:nowrap}
+.ck{width:26px;height:26px;border-radius:50%;border:1.5px solid #E6C6D3;flex:none;position:relative;transition:background .15s,border-color .15s}
+.sv[aria-pressed="true"]{background:color-mix(in srgb,var(--soft) 70%,var(--surf))}
+.sv[aria-pressed="true"] .ck{background:var(--acc);border-color:var(--acc)}
+.sv[aria-pressed="true"] .ck::after{content:"";position:absolute;left:8.5px;top:4.5px;width:6px;height:11px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+
+/* Orari e operatrici */
+.slots{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media(min-width:820px){.slots{grid-template-columns:repeat(auto-fill,minmax(96px,1fr))}}
+.slot{display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 6px;border-radius:14px;background:var(--surf);border:1.5px solid var(--line);font-weight:600;cursor:pointer;transition:background .15s,border-color .15s}
+.slot:active{background:var(--soft)}
+.slot[aria-pressed="true"]{background:var(--acc);border-color:var(--acc);color:#fff}
+.opc .slots{grid-template-columns:repeat(2,1fr)}
+@media(min-width:820px){.opc .slots{grid-template-columns:repeat(4,1fr)}}
+.av{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;font:600 .78rem "Hanken Grotesk",sans-serif;font-style:normal;color:#fff;flex:none}
+.av[data-o="m"]{background:#C93C6E}.av[data-o="a"]{background:#B58E5E}.av[data-o="r"]{background:#7D5C93}.av[data-o="q"]{background:var(--soft);color:var(--acc)}
+.slot[aria-pressed="true"] .av{background:#fff;color:var(--acc)}
+.opc,.row{background:var(--surf);border-radius:22px;padding:16px 18px;margin-bottom:12px;box-shadow:var(--sh)}
+.opc>b{display:block;font-weight:600}
+.opc small,.row small{display:block;color:var(--mute);margin:2px 0 12px}
+.row{display:flex;gap:12px;align-items:center;justify-content:space-between}
+.row.riep{display:block;margin-bottom:18px}
+.row.riep small{margin:4px 0 0}
+.row small a{color:var(--acc);font-weight:600}
+
+/* Calendario */
+.cal{background:var(--surf);border-radius:24px;padding:16px;box-shadow:var(--sh);margin-bottom:16px;max-width:520px}
+.calh{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.calh b{font:400 1.6rem "Instrument Serif",Georgia,serif;color:var(--head);text-transform:capitalize}
+.calh button{width:40px;height:40px;border-radius:50%;border:0;background:var(--soft);font-size:1.3rem;line-height:1;cursor:pointer;color:var(--head)}
+.calh button:disabled{opacity:.3;cursor:not-allowed}
+.cg{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.cg .wd{font-size:.8rem;font-weight:600;color:var(--mute);padding:6px 0}
+.cg button{aspect-ratio:1;border:0;border-radius:50%;background:none;font-weight:600;cursor:pointer;color:var(--ink)}
+.cg button:hover:not(:disabled){background:var(--soft)}
+.cg button:disabled{opacity:.28;cursor:not-allowed;font-weight:400}
+.cg button.oggi{box-shadow:inset 0 0 0 1.5px var(--gold)}
+.cg button[aria-pressed="true"]{background:var(--acc);color:#fff}
+
+/* Moduli */
+label{display:block;font-weight:500;font-size:.88rem;color:var(--mute);margin:0 0 14px}
+input{display:block;width:100%;margin-top:6px;padding:14px;font:inherit;font-size:1rem;color:var(--ink);background:var(--surf);border:1.5px solid var(--line);border-radius:14px}
+input:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 4px color-mix(in srgb,var(--acc) 15%,transparent)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.err{color:var(--wait);font-weight:500;min-height:1.4em;margin:0 0 6px}
+.cta{display:block;width:100%;max-width:440px;margin:24px auto 0;padding:16px;border:0;border-radius:999px;background:var(--acc);color:#fff;font-weight:600;font-size:1.02rem;cursor:pointer;box-shadow:0 12px 24px -12px var(--acc);transition:transform .12s,background .15s}
+.cta:active{transform:scale(.985)}
+.cta:disabled{opacity:.55}
+.nota{margin:26px 0 0;color:var(--mute);font-size:.88rem;text-align:center}
+.st{display:inline-block;margin-top:6px;padding:4px 11px;border-radius:999px;font-size:.84rem;font-weight:600}
+.st.r{background:#FDE4E6;color:var(--wait)}
+.st.v{background:#DDF1E7;color:var(--ok)}
+.st.g{background:#EEE;color:#777}
+.x{border:1.5px solid var(--wait);color:var(--wait);background:none;border-radius:999px;padding:8px 14px;font-weight:600;cursor:pointer}
+.calbtn{display:block;width:100%;text-align:center;padding:13px;border-radius:999px;border:1.5px solid var(--acc);background:none;color:var(--acc);font-weight:600;cursor:pointer;text-decoration:none}
+#barra{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 18px calc(12px + env(safe-area-inset-bottom,0px));background:rgba(253,242,245,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--line)}
+@media(min-width:820px){#barra{padding-left:max(32px,calc((100vw - 900px)/2 + 32px));padding-right:max(32px,calc((100vw - 900px)/2 + 32px))}}
+@media(min-width:1200px){#barra{padding-left:calc((100vw - 1120px)/2 + 32px);padding-right:calc((100vw - 1120px)/2 + 32px)}}
+@media(min-width:1500px){#barra{padding-left:calc((100vw - 1280px)/2 + 32px);padding-right:calc((100vw - 1280px)/2 + 32px)}}
+@media(min-width:2200px){#barra{padding-left:calc((100vw - 1700px)/2 + 32px);padding-right:calc((100vw - 1700px)/2 + 32px)}}
+#barra #btxt{font-weight:600;color:var(--head)}
+#barra .cta{margin:0;width:auto;padding:13px 28px}
+
+/* Finestre */
+.calq{position:fixed;inset:0;z-index:70;background:rgba(43,26,37,.45);display:flex;align-items:center;justify-content:center;padding:20px}
+.calq>div{background:var(--surf);border-radius:26px;padding:26px 22px;max-width:400px;width:100%;text-align:center;box-shadow:0 24px 60px -12px rgba(43,26,37,.5)}
+.calq h3{margin:0 0 8px;font:400 1.8rem/1.1 "Instrument Serif",Georgia,serif;color:var(--head)}
+.calq p{margin:0 0 18px;color:var(--mute)}
+.calq .cqb{display:grid;gap:10px}
+.calq button{font:inherit;font-weight:600;padding:14px;border-radius:999px;border:1.5px solid var(--acc);cursor:pointer}
+.calq .si{background:var(--acc);color:#fff}
+.calq .si.rosso{background:var(--wait);border-color:var(--wait)}
+.calq .no{background:none;color:var(--acc)}
+textarea,select{display:block;width:100%;margin-top:6px;padding:12px 14px;font:inherit;font-size:1rem;color:var(--ink);background:var(--surf);border:1.5px solid var(--line);border-radius:14px}
+textarea{min-height:84px;resize:vertical}
 
 /* Splash screen: un solo momento animato, poi si dissolve */
-#splash{position:fixed;inset:0;z-index:99;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:radial-gradient(60% 45% at 50% 42%,#FFFFFF 0,#FFF0F5 55%,#FBD9E6 100%);transition:opacity .6s ease,visibility .6s}
+#splash{position:fixed;inset:0;z-index:99;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:radial-gradient(60% 45% at 50% 42%,#FFFFFF 0,#FEF3F6 55%,#FADCE6 100%);transition:opacity .6s ease,visibility .6s}
 #splash.via{opacity:0;visibility:hidden}
 #splash svg{width:min(44vw,200px);height:auto;overflow:visible}
 #splash .anello{stroke-dasharray:176;stroke-dashoffset:176;animation:disegna 1.1s .15s cubic-bezier(.6,.1,.2,1) forwards}
 #splash .disco{transform-origin:50px 50px;transform:scale(0);animation:pop .6s .8s cubic-bezier(.2,1.4,.4,1) forwards}
 #splash .luce{opacity:0;animation:appare .4s 1.2s forwards}
 #splash .punto{transform-origin:71.45px 32px;transform:scale(0);animation:pop .5s 1.15s cubic-bezier(.2,1.6,.4,1) forwards}
-#splash .nome{font:italic 500 clamp(3rem,16vw,4.6rem)/1 "Bodoni Moda",Georgia,serif;color:var(--head);opacity:0;animation:sale .8s 1.3s ease forwards}
-#splash .motto{margin-top:-6px;color:var(--gold);font-weight:500;letter-spacing:.06em;opacity:0;animation:sale .8s 1.6s ease forwards}
+#splash .nome{font:italic 400 clamp(3.6rem,18vw,5.4rem)/1 "Instrument Serif",Georgia,serif;color:var(--head);opacity:0;animation:sale .8s 1.3s ease forwards}
+#splash .motto{margin-top:-4px;color:var(--gold);font-weight:500;letter-spacing:.05em;opacity:0;animation:sale .8s 1.6s ease forwards}
 @keyframes disegna{to{stroke-dashoffset:0}}
 @keyframes pop{to{transform:scale(1)}}
 @keyframes appare{to{opacity:1}}
 @keyframes sale{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){#splash *{animation-duration:.01s!important;animation-delay:0s!important}}
 
-.p[hidden]{display:none}
-.tabs{display:flex;gap:8px;margin:10px 0 4px}
-.tabs button{flex:1;padding:11px;border-radius:999px;border:1.5px solid var(--line);background:var(--surf);font-weight:500;cursor:pointer}
-.tabs button[aria-pressed="true"]{background:var(--soft);border-color:var(--acc);color:var(--head);font-weight:700}
-.gl{margin:18px 0 8px;color:var(--mute);font-size:.85rem;font-weight:700}
-#lsv{display:grid;gap:12px}
-#lsv .gl{margin-bottom:-2px}
-@media(min-width:820px){#lsv{grid-template-columns:repeat(2,1fr)}#lsv .gl{grid-column:1/-1}}
-@media(min-width:1500px){#lsv{grid-template-columns:repeat(3,1fr)}}
-.ind{background:none;border:0;color:var(--acc);font-weight:700;padding:12px 0 0;cursor:pointer}
-.hint{color:var(--mute);margin:0 0 14px}
-.cal{background:var(--surf);border:1.5px solid var(--line);border-radius:22px;padding:14px;box-shadow:var(--sh);margin-bottom:14px;max-width:520px}
-.calh{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.calh b{font:500 1.3rem "Bodoni Moda",Georgia,serif;color:var(--head);text-transform:capitalize}
-.calh button{width:42px;height:42px;border-radius:50%;border:1.5px solid var(--line);background:var(--bg);font-size:1.3rem;cursor:pointer}
-.calh button:disabled{opacity:.3;cursor:not-allowed}
-.cg{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;text-align:center}
-.cg .wd{font-size:.8rem;font-weight:700;color:var(--gold);padding:4px 0}
-.cg button{aspect-ratio:1;border:0;border-radius:50%;background:none;cursor:pointer}
-.cg button:not(:disabled){font-weight:700;background:color-mix(in srgb,var(--acc) 10%,transparent)}
-.cg button:disabled{opacity:.3;cursor:not-allowed}
-.cg button[aria-pressed="true"]{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff}
-.opc,.row{background:var(--surf);border:1.5px solid var(--line);border-radius:20px;padding:14px 16px;margin-bottom:12px;box-shadow:var(--sh)}
-.opc small,.row small{display:block;color:var(--mute);margin:2px 0 10px}
-.row{display:flex;gap:12px;align-items:center;justify-content:space-between}
-.row.riep{display:block}
-.row.riep small{margin:4px 0 0}
-label{display:block;font-weight:500;font-size:.9rem;color:var(--mute);margin:0 0 14px}
-input{display:block;width:100%;margin-top:6px;padding:14px;font:inherit;font-size:1rem;color:var(--ink);background:var(--surf);border:1.5px solid var(--line);border-radius:14px}
-input:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 4px color-mix(in srgb,var(--acc) 16%,transparent)}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.err{color:var(--wait);font-weight:500;min-height:1.4em;margin:0 0 6px}
-.st.g{background:#EEE;color:#777;border:1.5px solid #bbb}
-.x{border:1.5px solid var(--wait);color:var(--wait);background:none;border-radius:999px;padding:8px 14px;font-weight:700;cursor:pointer}
-#barra{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 18px calc(12px + env(safe-area-inset-bottom,0px));background:rgba(255,245,248,.94);backdrop-filter:blur(8px);border-top:1px solid var(--line)}
-#barra[hidden]{display:none}
-#barra .cta{margin:0;width:auto;padding:13px 28px}
-.wrap{padding-bottom:110px}
-
-[hidden]{display:none!important}
-.alink{margin-left:auto;align-self:flex-start;font-size:.8rem;font-weight:700;color:var(--head);background:var(--surf);border:1.5px solid var(--line);padding:7px 12px;border-radius:999px;text-decoration:none;white-space:nowrap}
-.calbtn{display:block;width:100%;text-align:center;padding:13px;border-radius:999px;border:1.5px solid var(--acc);background:none;color:var(--acc);font-weight:700;cursor:pointer;text-decoration:none}
-.row small a{color:var(--acc);font-weight:700}
-.calq{position:fixed;inset:0;z-index:70;background:rgba(58,34,48,.5);display:flex;align-items:center;justify-content:center;padding:20px}
-.calq>div{background:var(--surf);border:1px solid var(--line);border-radius:22px;padding:24px 22px;max-width:380px;width:100%;text-align:center;box-shadow:0 20px 50px -10px rgba(58,34,48,.5)}
-.calq h3{margin:0 0 8px;font:500 1.4rem "Bodoni Moda",Georgia,serif;color:var(--head)}
-.calq p{margin:0 0 18px;color:var(--mute)}
-.calq .cqb{display:grid;gap:10px}
-.calq button{font:inherit;font-weight:700;padding:13px;border-radius:14px;border:1.5px solid var(--acc);cursor:pointer}
-.calq .si{background:var(--acc);color:#fff}
-.calq .no{background:none;color:var(--acc)}
-.foot{display:block;margin:34px auto 0;text-align:center;color:var(--mute);font-size:.85rem}
-textarea,select{display:block;width:100%;margin-top:6px;padding:12px 14px;font:inherit;font-size:1rem;color:var(--ink);background:var(--surf);border:1.5px solid var(--line);border-radius:14px}
-textarea{min-height:84px;resize:vertical}
 /* Area titolare */
 .aw{width:100%;max-width:2000px;margin:0 auto;padding:0 18px 48px}
 @media(min-width:820px){.aw{padding:0 32px 56px}}
@@ -148,7 +183,7 @@ textarea{min-height:84px;resize:vertical}
 .atop .top{padding:0}
 .acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .bt{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 16px;border-radius:999px;border:1.5px solid var(--line);background:var(--surf);font-weight:700;cursor:pointer;text-decoration:none;color:var(--head);font-size:.95rem}
-.bt.pri{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;border-color:transparent}
+.bt.pri{background:var(--acc);color:#fff;border-color:transparent}
 .bt.ok{background:var(--ok);color:#fff;border-color:transparent}
 .bt.no{color:var(--wait);border-color:var(--wait);background:none}
 .bt:disabled{opacity:.5;cursor:not-allowed}
@@ -185,13 +220,14 @@ textarea{min-height:84px;resize:vertical}
 #det{position:fixed;inset:0;z-index:30;overflow:auto;background:var(--bg);padding:14px 18px calc(24px + env(safe-area-inset-bottom,0px))}
 @media(min-width:1100px){#det{position:static;inset:auto;overflow:visible;background:none;padding:0 0 18px}}
 .dc{background:var(--surf);border:1.5px solid var(--line);border-radius:22px;padding:18px;box-shadow:var(--sh)}
-.dc h3{margin:0 0 6px;font:500 1.4rem "Bodoni Moda",Georgia,serif;color:var(--head)}
+.dc h3{margin:0 0 6px;font:400 1.7rem/1.1 "Instrument Serif",Georgia,serif;color:var(--head)}
 .dc h4{margin:18px 0 6px;font-size:.9rem;color:var(--mute)}
 .dc p{margin:4px 0}
 .dc .two{margin:10px 0}
 .dc .acts{margin-top:8px}
 .dc .rg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.dc .rg input,.dc .rg select{margin:0}
+.dc .rg>*{min-width:0}
+.dc .rg input,.dc .rg select{margin:0;width:100%;min-width:0}
 .dc .mini{padding:6px 0;border-bottom:1px solid var(--line);font-size:.9rem}
 .dc .mini small{color:var(--mute)}
 .modal{position:fixed;inset:0;z-index:40;background:rgba(58,34,48,.45);display:flex;align-items:flex-end;justify-content:center}
@@ -216,17 +252,19 @@ textarea{min-height:84px;resize:vertical}
 </div>
 
 <div id="cli">
+<svg class="orbita" viewBox="0 0 340 340" aria-hidden="true"><circle cx="170" cy="170" r="150" fill="none" stroke="#B58E5E" stroke-opacity=".45" stroke-width="1"/><circle cx="170" cy="170" r="104" fill="none" stroke="#E9B9CB" stroke-opacity=".7" stroke-width="1"/><g class="giro"><circle cx="170" cy="20" r="11" fill="#FADCE6"/><circle cx="170" cy="20" r="6.5" fill="#B58E5E"/></g></svg>
 <main class="wrap">
  <header class="top">
   <svg viewBox="0 0 100 100" aria-hidden="true"><defs><linearGradient id="g2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#D9628C"/><stop offset="1" stop-color="#B83F6B"/></linearGradient></defs><circle cx="50" cy="50" r="28" fill="none" stroke="#B8935A" stroke-width="3"/><circle cx="50" cy="50" r="17" fill="url(#g2)"/><circle cx="44" cy="43" r="4" fill="#FFECF3"/><circle cx="71.45" cy="32" r="8.2" fill="#FCE4ED"/><circle cx="71.45" cy="32" r="5.5" fill="#B8935A"/></svg>
   <div class="brand"><b>Mira</b><span>oltre l’estetica</span></div>
-  <a class="alink" href="#admin">Area riservata</a>
+  <button class="ind" id="cBtn">Accedi</button>
+  <a class="alink" href="#admin" aria-label="Area riservata"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></a>
  </header>
  <p id="cErr" class="err" role="alert" hidden>Non riesco a collegarmi al sistema di prenotazione. Riprova tra poco.</p>
+ <div id="p1h" class="hero"><p id="cChi"></p><h1>Prenota il tuo appuntamento</h1><p class="sub">Scegli uno o più trattamenti: li facciamo uno dopo l’altro.</p></div>
  <nav class="tabs"><button id="tP" aria-pressed="true">Prenota</button><button id="tM" aria-pressed="false">Le mie prenotazioni</button></nav>
 
- <div id="p1" class="p"><div class="hero"><h1>Prenota il tuo appuntamento</h1><p>Scegli uno o più trattamenti: li facciamo uno dopo l’altro.</p></div>
-  <section><h2>Trattamenti</h2><div id="lsv"></div></section></div>
+ <div id="p1" class="p"><section style="padding-top:12px"><div id="lsv"></div></section></div>
 
  <div id="p2" class="p" hidden><button class="ind" data-v="1">‹ Trattamenti</button>
   <section><h2>Giorno e ora</h2><div class="cal" id="cal"></div><div id="slots" class="slots"></div></section></div>
@@ -243,11 +281,23 @@ textarea{min-height:84px;resize:vertical}
  <div id="p5" class="p" hidden><section><h2>Richiesta inviata</h2>
   <p class="hint">La tua prenotazione è in attesa di conferma. Quando Mira la conferma, in “Le mie prenotazioni” vedrai “Confermato”.</p>
   <div id="calBox" hidden style="display:grid;gap:8px;margin:14px 0"><a class="calbtn" id="calG" target="_blank" rel="noopener">📅 Aggiungi a Google Calendar</a><button class="calbtn" id="calApple"></button></div>
+  <div id="invito" class="row" style="display:block;margin:6px 0 4px"><b>Ritrova le tue prenotazioni ovunque</b><small>Accedi con Google o con la tua email: le vedi anche da un altro telefono o dal PC. È facoltativo.</small><button class="calbtn" id="invitoBtn" style="margin-top:6px">Accedi / Registrati</button></div>
   <button class="cta" id="b5">Vai a Le mie prenotazioni</button></section></div>
 
  <div id="pm" class="p" hidden><section><h2>Le mie prenotazioni</h2><div id="mie"></div>
   <p class="nota">Puoi annullare fino al giorno prima. Per modifiche dell’ultimo momento contattaci.</p></section></div>
 </main>
+<div class="calq" id="loginModal" hidden role="dialog" aria-modal="true"><div style="max-height:90vh;overflow:auto;text-align:left">
+ <div style="text-align:right"><button id="lmX" style="background:none;border:0;padding:0;color:var(--acc)">✕ Chiudi</button></div>
+ <h3 style="text-align:left">Accedi o registrati</h3>
+ <p style="text-align:left">È facoltativo: serve per ritrovare le tue prenotazioni da ogni dispositivo. Puoi prenotare anche senza. Se hai già prenotato da questo telefono, usa “Registrati” o “Accedi con Google” la prima volta, così non le perdi.</p>
+ <button class="si" id="btnGoogle" style="width:100%">Accedi con Google</button>
+ <p style="text-align:center;margin:14px 0 6px">oppure con email e password</p>
+ <label>Email<input id="eMail" type="email" autocomplete="email"></label>
+ <label>Password<input id="ePass" type="password" autocomplete="current-password" placeholder="almeno 6 caratteri"></label>
+ <div class="cqb"><button class="si" id="btnEmailLogin">Accedi</button><button class="no" id="btnEmailReg">Non hai un account? Registrati</button><button class="no" id="btnReset" style="border-color:transparent">Password dimenticata?</button></div>
+ <p class="err" id="errG" role="alert" style="margin:12px 0 0"></p>
+</div></div>
 <div class="calq" id="calq" hidden role="dialog" aria-modal="true"><div><h3>Aggiungere al calendario?</h3><p id="calqTxt"></p><div class="cqb"><button class="si" id="calqSi">Sì, aggiungi a Google Calendar</button><button id="calqAltro" hidden style="background:none;color:var(--ink);border-color:var(--line)">Uso un altro calendario (Samsung…)</button><button class="no" id="calqNo">No, grazie</button></div></div></div>
 <div id="barra" hidden><span id="btxt"></span><button class="cta" id="b1">Continua</button></div>
 </div>
@@ -255,7 +305,7 @@ textarea{min-height:84px;resize:vertical}
 <div id="adm" hidden>
  <div class="aw">
   <div id="aLogin" hidden style="max-width:460px;margin:0 auto">
-   <header class="top"><svg viewBox="0 0 100 100" aria-hidden="true"><defs><linearGradient id="g2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#D9628C"/><stop offset="1" stop-color="#B83F6B"/></linearGradient></defs><circle cx="50" cy="50" r="28" fill="none" stroke="#B8935A" stroke-width="3"/><circle cx="50" cy="50" r="17" fill="url(#g2)"/><circle cx="44" cy="43" r="4" fill="#FFECF3"/><circle cx="71.45" cy="32" r="8.2" fill="#FCE4ED"/><circle cx="71.45" cy="32" r="5.5" fill="#B8935A"/></svg><div class="brand"><b>Mira</b><span>area riservata</span></div></header>
+   <header class="top"><svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="28" fill="none" stroke="#B8935A" stroke-width="3"/><circle cx="50" cy="50" r="17" fill="#C93C6E"/><circle cx="44" cy="43" r="4" fill="#FFECF3"/><circle cx="71.45" cy="32" r="8.2" fill="#FCE4ED"/><circle cx="71.45" cy="32" r="5.5" fill="#B8935A"/></svg><div class="brand"><b>Mira</b><span>area riservata</span></div></header>
    <section><h2>Accedi</h2>
     <label>Email<input id="aEmail" type="email" autocomplete="username"></label>
     <label>Password<input id="aPass" type="password" autocomplete="current-password"></label>
@@ -264,7 +314,7 @@ textarea{min-height:84px;resize:vertical}
   </div>
   <div id="aDash" hidden>
    <div class="atop">
-    <div class="top"><svg viewBox="0 0 100 100" aria-hidden="true"><defs><linearGradient id="g2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#D9628C"/><stop offset="1" stop-color="#B83F6B"/></linearGradient></defs><circle cx="50" cy="50" r="28" fill="none" stroke="#B8935A" stroke-width="3"/><circle cx="50" cy="50" r="17" fill="url(#g2)"/><circle cx="44" cy="43" r="4" fill="#FFECF3"/><circle cx="71.45" cy="32" r="8.2" fill="#FCE4ED"/><circle cx="71.45" cy="32" r="5.5" fill="#B8935A"/></svg><div class="brand"><b>Mira</b><span>area riservata</span></div></div>
+    <div class="top"><svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="28" fill="none" stroke="#B8935A" stroke-width="3"/><circle cx="50" cy="50" r="17" fill="#C93C6E"/><circle cx="44" cy="43" r="4" fill="#FFECF3"/><circle cx="71.45" cy="32" r="8.2" fill="#FCE4ED"/><circle cx="71.45" cy="32" r="5.5" fill="#B8935A"/></svg><div class="brand"><b>Mira</b><span>area riservata</span></div></div>
     <div class="acts">
      <button class="bt" id="aBadgeBtn">Da confermare <span class="badge zero" id="aBadge">0</span></button>
      <button class="bt" id="aSuono">🔕 Attiva suoni</button>
@@ -290,6 +340,8 @@ textarea{min-height:84px;resize:vertical}
  <div id="man" class="modal" hidden></div>
 </div>
 
+<div class="calq" id="dlg" hidden role="dialog" aria-modal="true" style="z-index:90"><div><h3 id="dlgT"></h3><p id="dlgP"></p><div class="cqb"><button class="si" id="dlgOk"></button><button class="no" id="dlgNo"></button></div></div></div>
+
 <script>
 // Splash: resta almeno 2,4 secondi e si chiude quando il collegamento a Firebase è pronto
 (function(){
@@ -305,7 +357,7 @@ if('serviceWorker'in navigator)addEventListener('load',()=>navigator.serviceWork
 </script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
-import { getAuth, onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, signOut, linkWithPopup, linkWithCredential, signInWithPopup, signInWithCredential, GoogleAuthProvider, EmailAuthProvider, sendEmailVerification, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
 import { getFirestore, collection, doc, getDoc, getDocs, setDoc, writeBatch, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -349,6 +401,15 @@ const cifre = t => String(t || '').replace(/\D/g, '');
 const waNum = t => { let d = cifre(t); if (d.startsWith('00')) d = d.slice(2); if (d.length <= 10 && !d.startsWith('39')) d = '39' + d; return d; };
 const hmIn = v => { const [h, m] = String(v || '').split(':').map(Number); return isNaN(h) || isNaN(m) ? null : h * 60 + m; };
 const blocchi = (a, op = a.op, data = a.data, ini = a.inizio, fin = a.fine) => { const r = []; for (let m = ini; m < fin; m += 5) r.push(`${data}_${op}_${m}`); return r; };
+function chiedi(titolo, testo, si, no, pericolo) { // finestra di conferma nello stile di Mira (al posto di quella del browser)
+  return new Promise(res => {
+    $('#dlgT').textContent = titolo; $('#dlgP').textContent = testo; $('#dlgOk').textContent = si; $('#dlgNo').textContent = no;
+    $('#dlgOk').className = 'si' + (pericolo ? ' rosso' : '');
+    const fine = v => { $('#dlg').hidden = true; res(v); };
+    $('#dlgOk').onclick = () => fine(true); $('#dlgNo').onclick = () => fine(false);
+    $('#dlg').hidden = false;
+  });
+}
 function toast(t) { const e = document.createElement('div'); e.className = 'toast'; e.textContent = t; document.body.appendChild(e); setTimeout(() => e.remove(), 3200); }
 const fineAvvio = () => { try { window.miraPronta && window.miraPronta(); } catch (e) {} };
 
@@ -371,15 +432,17 @@ async function occupati(data) { // orari occupati del giorno (senza dati persona
 function vai(n) {
   $$('.p').forEach(e => e.hidden = e.id !== 'p' + n);
   $('#barra').hidden = !(n === 1 && S.sel.length);
+  $('#p1h').hidden = n !== 1;
   $('#tP').setAttribute('aria-pressed', n !== 'm'); $('#tM').setAttribute('aria-pressed', n === 'm');
   scrollTo(0, 0);
 }
 function renderSv() {
-  let h = '', c = '';
+  let h = '', c = '', aperto = false;
   SV.forEach(s => {
-    if (s.cat !== c) { c = s.cat; h += `<div class="gl">${esc(c)}</div>`; }
-    h += `<button class="sv" data-i="${s.id}" aria-pressed="${S.sel.includes(s.id)}"><i></i><span><b>${esc(s.nome)}</b><small>${s.ops.map(o => OPS[o]).join(', ')}</small></span><span class="d">${fd(s.min)}</span></button>`;
+    if (s.cat !== c) { if (aperto) h += '</div></div>'; c = s.cat; aperto = true; h += `<div class="cat"><h3>${esc(c)}</h3><div class="rows">`; }
+    h += `<button class="sv" data-i="${s.id}" aria-pressed="${S.sel.includes(s.id)}"><span class="t"><b>${esc(s.nome)}</b><small>${s.ops.map(o => OPS[o]).join(', ')}</small></span><span class="d">${fd(s.min)}</span><span class="ck" aria-hidden="true"></span></button>`;
   });
+  if (aperto) h += '</div></div>';
   $('#lsv').innerHTML = h;
   $$('#lsv .sv').forEach(b => b.onclick = () => {
     const i = +b.dataset.i, k = S.sel.indexOf(i); k < 0 ? S.sel.push(i) : S.sel.splice(k, 1);
@@ -396,7 +459,7 @@ function renderCal() {
   const oggi = oggiD(), max = new Date(oggi); max.setDate(max.getDate() + 90);
   let h = `<div class="calh"><button id="cp" aria-label="Mese precedente" ${m <= new Date(oggi.getFullYear(), oggi.getMonth(), 1) ? 'disabled' : ''}>‹</button><b>${m.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })}</b><button id="cn" aria-label="Mese successivo" ${new Date(y, mo + 1, 1) > max ? 'disabled' : ''}>›</button></div><div class="cg">`;
   h += ['L', 'M', 'M', 'G', 'V', 'S', 'D'].map(x => `<span class="wd">${x}</span>`).join('') + '<span></span>'.repeat(vuoti);
-  for (let d = 1; d <= gg; d++) { const D = new Date(y, mo, d), ok = D >= oggi && D <= max && apertura(D); h += `<button data-d="${iso(D)}" ${ok ? '' : 'disabled'} aria-pressed="${S.data === iso(D)}">${d}</button>`; }
+  for (let d = 1; d <= gg; d++) { const D = new Date(y, mo, d), ok = D >= oggi && D <= max && apertura(D); h += `<button data-d="${iso(D)}" ${iso(D) === iso(oggi) ? 'class="oggi"' : ''} ${ok ? '' : 'disabled'} aria-pressed="${S.data === iso(D)}">${d}</button>`; }
   $('#cal').innerHTML = h + '</div>';
   $('#cp').onclick = () => { S.mese.setMonth(mo - 1); renderCal(); };
   $('#cn').onclick = () => { S.mese.setMonth(mo + 1); renderCal(); };
@@ -418,7 +481,7 @@ async function scegliGiorno(d) {
 }
 function renderOps() {
   $('#ops').innerHTML = piano(S.ora).map((p, i) => `<div class="opc"><b>${esc(p.sv.nome)}</b><small>${esc(dl(S.data))}, ${hm(p.ini)}–${hm(p.fin)}</small><div class="slots">` +
-    ['q', ...liberi(p)].map(o => `<button class="slot" data-i="${i}" data-o="${o}" aria-pressed="${S.sc[i] === o}">${o === 'q' ? 'Qualsiasi' : OPS[o]}</button>`).join('') + '</div></div>').join('');
+    ['q', ...liberi(p)].map(o => `<button class="slot" data-i="${i}" data-o="${o}" aria-pressed="${S.sc[i] === o}"><i class="av" data-o="${o}">${o === 'q' ? '✦' : OPS[o][0]}</i>${o === 'q' ? 'Qualsiasi' : OPS[o]}</button>`).join('') + '</div></div>').join('');
   $$('#ops .slot').forEach(b => b.onclick = () => {
     S.sc[+b.dataset.i] = b.dataset.o;
     $$('#ops .slot[data-i="' + b.dataset.i + '"]').forEach(x => x.setAttribute('aria-pressed', x === b));
@@ -513,7 +576,7 @@ function renderMie() {
   $$('#mie [data-gcal]').forEach(k => k.onclick = e => { e.preventDefault(); const x = MIE.find(z => z.id === k.dataset.gcal); if (x) apriGoogleCalendar(evDaApp(x)); });
   $$('#mie [data-ics]').forEach(k => k.onclick = e => { e.preventDefault(); const x = MIE.find(z => z.id === k.dataset.ics); if (x) scaricaIcs(evDaApp(x)); });
   $$('#mie .x').forEach(b => b.onclick = async () => {
-    const x = MIE.find(z => z.id === b.dataset.id); if (!x || !confirm('Vuoi annullare questa prenotazione?')) return;
+    const x = MIE.find(z => z.id === b.dataset.id); if (!x || !await chiedi('Annullare la prenotazione?', x.sv + ' · ' + dl(x.data) + ', ore ' + hm(x.inizio), 'Sì, annulla', 'No, tienila', true)) return;
     b.disabled = true;
     try {
       const batch = writeBatch(db);
@@ -583,7 +646,7 @@ function apri(id) { SEL = id; renderDet(); renderAgenda(); if (innerWidth >= 110
 function chiudiDet() { SEL = null; $('#det').hidden = true; renderAgenda(); }
 async function conferma(id) { try { const b = writeBatch(dbA); b.update(doc(dbA, 'appointments', id), { stato: 'confermato' }); await b.commit(); toast('Confermato'); } catch (e) { console.error(e); toast('Non riesco a confermare. Riprova.'); } }
 async function annullaA(a) {
-  if (!confirm('Annullare questo appuntamento? Lo slot tornerà libero.')) return;
+  if (!await chiedi('Annullare l’appuntamento?', a.nome + ' ' + a.cognome + ' · ' + a.sv + ' · ' + dl(a.data) + ', ' + hm(a.inizio) + '. L’orario tornerà libero.', 'Sì, annulla', 'No, tienilo', true)) return;
   try { const b = writeBatch(dbA); b.update(doc(dbA, 'appointments', a.id), { stato: 'annullato', annullatoDa: 'titolare' }); blocchi(a).forEach(id => b.delete(doc(dbA, 'busy', id))); await b.commit(); toast('Annullato'); chiudiDet(); }
   catch (e) { console.error(e); toast('Non riesco ad annullare. Riprova.'); }
 }
@@ -668,9 +731,66 @@ function apriManuale() {
   };
 }
 
+/* ---- Accesso facoltativo (Google o email e password), come nella vecchia app ----
+   La cliente parte con un accesso anonimo: registrandosi lo COLLEGHIAMO, così le prenotazioni già fatte restano sue. */
+const conto = () => !!U && !U.isAnonymous;
+const erroreAuth = e => { const c = e && e.code;
+  if (c === 'auth/invalid-credential' || c === 'auth/wrong-password' || c === 'auth/user-not-found') return 'Email o password non corretti.';
+  if (c === 'auth/invalid-email') return 'Controlla l’indirizzo email.';
+  if (c === 'auth/email-already-in-use' || c === 'auth/credential-already-in-use') return 'Esiste già un account con questa email: prova ad accedere (o con Google, se ti eri registrata così).';
+  if (c === 'auth/weak-password') return 'La password deve avere almeno 6 caratteri.';
+  if (c === 'auth/too-many-requests') return 'Troppi tentativi: riprova tra qualche minuto.';
+  if (c === 'auth/network-request-failed') return 'Controlla la connessione e riprova.';
+  if (c === 'auth/operation-not-allowed') return 'Questo tipo di accesso non è ancora attivo.';
+  if (c === 'auth/popup-blocked') return 'Il browser ha bloccato la finestra di accesso: consentila e riprova.';
+  return 'Operazione non riuscita. Riprova.'; };
+const msgG = t => { $('#errG').textContent = t; };
+function aggiornaConto() {
+  const c = conto();
+  $('#cChi').textContent = c ? 'Ciao ' + ((U.displayName || U.email || '').split(' ')[0]) : '';
+  $('#cBtn').textContent = c ? 'Esci' : 'Accedi';
+  $('#invito').hidden = c;
+  if (c) $('#loginModal').hidden = true;
+}
+async function dopoAccesso() { try { await auth.currentUser.reload(); } catch (e) {} U = auth.currentUser; aggiornaConto(); }
+async function accediGoogle() {
+  msgG(''); const prov = new GoogleAuthProvider();
+  try {
+    if (auth.currentUser && auth.currentUser.isAnonymous) await linkWithPopup(auth.currentUser, prov); else await signInWithPopup(auth, prov);
+    await dopoAccesso();
+  } catch (e) {
+    if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return;
+    if (e.code === 'auth/credential-already-in-use' || e.code === 'auth/email-already-in-use') { // account Google già usato altrove: si entra in quello
+      const cred = GoogleAuthProvider.credentialFromError(e);
+      if (cred) { try { await signInWithCredential(auth, cred); await dopoAccesso(); return; } catch (x) { e = x; } }
+    }
+    console.error(e); msgG(e.code === 'auth/operation-not-allowed' ? erroreAuth(e) : 'Accesso non riuscito. Se hai installato l’app, prova ad aprire la pagina dal browser.');
+  }
+}
+const campiEmail = () => { msgG(''); return { e: $('#eMail').value.trim(), p: $('#ePass').value }; };
+const apriLogin = () => { msgG(''); $('#loginModal').hidden = false; };
+$('#btnGoogle').onclick = accediGoogle;
+$('#btnEmailLogin').onclick = async () => { const { e, p } = campiEmail(); if (!e || !p) return msgG('Inserisci email e password.');
+  try { await signInWithEmailAndPassword(auth, e, p); await dopoAccesso(); } catch (x) { console.error(x); msgG(erroreAuth(x)); } };
+$('#btnEmailReg').onclick = async () => { const { e, p } = campiEmail();
+  if (!/^\S+@\S+\.\S+$/.test(e)) return msgG('Inserisci un’email valida.');
+  if (p.length < 6) return msgG('Scegli una password di almeno 6 caratteri.');
+  try {
+    const r = await linkWithCredential(auth.currentUser, EmailAuthProvider.credential(e, p));
+    try { await sendEmailVerification(r.user); toast('Account creato. Ti abbiamo inviato un’email per confermare l’indirizzo.'); } catch (y) {}
+    await dopoAccesso();
+  } catch (x) { console.error(x); msgG(erroreAuth(x)); } };
+$('#btnReset').onclick = async () => { const { e } = campiEmail();
+  if (!/^\S+@\S+\.\S+$/.test(e)) return msgG('Scrivi la tua email qui sopra, poi premi “Password dimenticata?”.');
+  try { await sendPasswordResetEmail(auth, e); } catch (x) { if (x.code !== 'auth/user-not-found' && x.code !== 'auth/invalid-email') return msgG(erroreAuth(x)); }
+  msgG('Se l’email è registrata, ti abbiamo inviato un link per scegliere una nuova password.'); };
+$('#lmX').onclick = () => { $('#loginModal').hidden = true; };
+$('#cBtn').onclick = () => conto() ? signOut(auth) : apriLogin();
+$('#invitoBtn').onclick = apriLogin;
+
 /* ===== Collegamenti ===== */
 $('#b1').onclick = () => { S.mese = oggiD(); S.mese.setDate(1); $('#slots').innerHTML = ''; renderCal(); vai(2); };
-$('#b3').onclick = () => { renderRiep(); try { const d = JSON.parse(localStorage.getItem('mira_dati') || 'null'); if (d) { if (!$('#fn').value) $('#fn').value = d.nome; if (!$('#fc').value) $('#fc').value = d.cognome; if (!$('#ft').value) $('#ft').value = d.tel; } } catch (e) {} vai(4); };
+$('#b3').onclick = () => { renderRiep(); try { let d = JSON.parse(localStorage.getItem('mira_dati') || 'null'); if (!d && MIE.length) { const m = [...MIE].sort((p, q) => (q.creato || 0) - (p.creato || 0))[0]; d = { nome: m.nome, cognome: m.cognome, tel: m.tel }; } if (!d && conto() && U.displayName) { const w = U.displayName.trim().split(/\s+/); d = { nome: w[0], cognome: w.slice(1).join(' '), tel: '' }; } if (d) { if (!$('#fn').value) $('#fn').value = d.nome; if (!$('#fc').value) $('#fc').value = d.cognome; if (!$('#ft').value) $('#ft').value = d.tel; } } catch (e) {} vai(4); };
 $('#b4').onclick = invia;
 $('#b5').onclick = () => { renderMie(); vai('m'); };
 $('#tP').onclick = () => vai(1);
@@ -710,7 +830,7 @@ addEventListener('hashchange', route);
 
 onAuthStateChanged(auth, async u => { // cliente
   if (!u) { try { await signInAnonymously(auth); } catch (e) { console.error('accesso anonimo', e); $('#cErr').textContent = 'Non riesco a collegarmi al sistema di prenotazione. Codice errore: ' + (e.code || e.message || 'sconosciuto'); $('#cErr').hidden = false; fineAvvio(); } return; }
-  U = u; $('#cErr').hidden = true; avviaCliente(); fineAvvio();
+  U = u; $('#cErr').hidden = true; aggiornaConto(); avviaCliente(); fineAvvio();
 });
 onAuthStateChanged(authA, u => { // titolare
   UA = u;
