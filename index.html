@@ -228,6 +228,7 @@ textarea{min-height:84px;resize:vertical}
 .bt.no{color:var(--wait);border-color:var(--wait);background:none}
 .bt:disabled{opacity:.5;cursor:not-allowed}
 .badge{display:inline-flex;min-width:1.7em;height:1.7em;padding:0 .5em;align-items:center;justify-content:center;border-radius:999px;background:var(--wait);color:#fff;font:700 .85rem "DM Sans",sans-serif;vertical-align:middle}
+.pend.ann{border-left:4px solid #8a8a8a}
 .badge.zero{background:var(--line);color:var(--mute)}
 .agrid{display:grid;gap:22px;margin-top:8px}
 @media(min-width:1100px){.agrid{grid-template-columns:minmax(0,1fr) 400px;align-items:start}}
@@ -325,7 +326,7 @@ textarea{min-height:84px;resize:vertical}
   <button class="cta" id="b5">Vai a Le mie prenotazioni</button></section></div>
 
  <div id="pm" class="p" hidden><section><h2>Le mie prenotazioni</h2><div id="mie"></div>
-  <p class="nota">Puoi annullare fino al giorno prima. Per modifiche dell’ultimo momento contattaci.</p></section></div>
+  <p class="nota" id="notaAnn">Puoi annullare fino al giorno prima. Per modifiche dell’ultimo momento contattaci.</p></section></div>
 </main>
 <div class="calq" id="loginModal" hidden role="dialog" aria-modal="true"><div style="max-height:90vh;overflow:auto;text-align:left">
  <div style="text-align:right"><button id="lmX" style="background:none;border:0;padding:0;color:var(--acc)">✕ Chiudi</button></div>
@@ -372,6 +373,7 @@ textarea{min-height:84px;resize:vertical}
     </div>
     <aside class="aside">
      <div id="det" hidden></div>
+     <div id="annBox" hidden><h2>Annullate dalle clienti <span class="badge" style="background:#8a8a8a">!</span></h2><div id="annList"></div></div>
      <h2>Da confermare <span class="badge zero" id="pBadge">0</span></h2>
      <div id="pend"></div>
     </aside>
@@ -437,7 +439,7 @@ function cfgDefault() {
   ['Cerette', [['inguine', 15, 'mar'], ['gambe', 30, 'mar'], ['gambaletto', 15, 'mar'], ['braccia', 15, 'mar'], ['gambe + inguine', 45, 'mar']]],
   ['Hennè', [['Hennè', 30, 'mar']]],
   ['Massaggi', [['Massaggio', 60, 'ar']]]];
-  return { ver: 0, apertura: ap,
+  return { ver: 0, ggAnnullo: 1, maxGiorno: 0, apertura: ap,
     ops: [['m', 'Mena'], ['a', 'Anna'], ['r', 'Miriana']].map(([id, nome]) => ({ id, nome, attiva: true, orari: {}, ferie: [] })),
     cat: CAT.map(([c, l]) => ({ nome: c, servizi: l.map(([n, min, o]) => ({ nome: c === 'Mani' ? 'Mani ' + n : c === 'Cerette' ? 'Ceretta ' + n : n, min, ops: o.split('') })) })) };
 }
@@ -446,6 +448,8 @@ function normCfg(c) { // protegge l’app da configurazioni incomplete
   const d = cfgDefault();
   if (!c || !Array.isArray(c.ops) || !c.ops.length || !Array.isArray(c.cat) || !c.apertura) return d;
   for (let w = 0; w < 7; w++) if (!c.apertura[w]) c.apertura[w] = d.apertura[w];
+  c.ggAnnullo = Number.isInteger(c.ggAnnullo) && c.ggAnnullo >= 0 && c.ggAnnullo <= 30 ? c.ggAnnullo : 1;
+  c.maxGiorno = Number.isInteger(c.maxGiorno) && c.maxGiorno >= 0 && c.maxGiorno <= 20 ? c.maxGiorno : 0;
   c.ops.forEach(o => { o.orari = o.orari || {}; o.ferie = o.ferie || []; });
   c.cat.forEach(k => { k.servizi = k.servizi || []; k.servizi.forEach(v => { v.ops = v.ops || []; }); });
   return c;
@@ -476,6 +480,9 @@ ricostruisci();
 const pad = n => String(n).padStart(2, '0'), hm = m => pad(Math.floor(m / 60)) + ':' + pad(m % 60);
 const fd = m => m < 60 ? m + ' min' : m % 60 ? Math.floor(m / 60) + ' h ' + m % 60 + ' min' : m / 60 + ' h';
 const oggiD = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
+const giorniA = data => Math.round((new Date(data + 'T00:00') - oggiD()) / 864e5); // giorni da oggi alla data
+const testoAnnullo = () => CFG.ggAnnullo === 0 ? 'Puoi annullare fino al momento dell’appuntamento.' : CFG.ggAnnullo === 1 ? 'Puoi annullare fino al giorno prima.' : 'Puoi annullare fino a ' + CFG.ggAnnullo + ' giorni prima.';
+const visiteGiorno = data => new Set((typeof MIE !== 'undefined' ? MIE : []).filter(x => x.data === data && x.stato !== 'annullato').map(x => x.gruppo || x.id)).size; // prenotazioni della cliente in quel giorno
 const iso = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
 const dl = s => new Date(s + 'T00:00').toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -563,6 +570,8 @@ let unsubBusy = null;
 function scegliGiorno(d) {
   S.data = d; S.ora = null;
   $$('#cal [data-d]').forEach(b => b.setAttribute('aria-pressed', b.dataset.d === d));
+  unsubBusy && unsubBusy(); unsubBusy = null;
+  if (CFG.maxGiorno && visiteGiorno(d) >= CFG.maxGiorno) { $('#slots').innerHTML = '<p class="hint">Per questo giorno hai già raggiunto il numero massimo di prenotazioni (' + CFG.maxGiorno + '). Scegli un altro giorno o contattaci.</p>'; return; }
   $('#slots').innerHTML = '<p class="hint">Cerco gli orari liberi…</p>';
   unsubBusy && unsubBusy();
   unsubBusy = onSnapshot(query(collection(db, 'busy'), where('data', '==', d)), s => {
@@ -604,6 +613,7 @@ async function invia() {
   const nome = $('#fn').value.trim(), cognome = $('#fc').value.trim(), tel = $('#ft').value.trim(), err = $('#err'), btn = $('#b4');
   if (!nome || !cognome || cifre(tel).length < 6) { err.textContent = 'Inserisci nome, cognome e un numero di telefono valido.'; return; }
   if (!U) { err.textContent = 'Connessione non ancora pronta. Riprova tra un istante.'; return; }
+  if (CFG.maxGiorno && visiteGiorno(S.data) >= CFG.maxGiorno) { err.textContent = 'Per questo giorno hai già raggiunto il numero massimo di prenotazioni (' + CFG.maxGiorno + ').'; return; }
   err.textContent = ''; btn.disabled = true;
   try {
     S.occ = await occupati(S.data); // ricontrollo prima di salvare
@@ -678,10 +688,11 @@ $('#calApple').onclick = () => { if (ULTIMA) scaricaIcs(ULTIMA); };
 $('#calG').onclick = e => { e.preventDefault(); if (ULTIMA) apriGoogleCalendar(ULTIMA); };
 
 function renderMie() {
+  $('#notaAnn') && ($('#notaAnn').textContent = testoAnnullo() + ' Per modifiche dell’ultimo momento contattaci.');
   const oggi = iso(oggiD()), L = MIE.filter(x => x.data >= oggi && !(x.stato === 'annullato' && x.annullatoDa === 'cliente')).sort((a, b) => a.data.localeCompare(b.data) || a.inizio - b.inizio);
   const B = { attesa: ['r', 'In attesa di conferma'], confermato: ['v', 'Confermato'], annullato: ['g', 'Annullato da Mira'] };
   $('#mie').innerHTML = L.length ? L.map(x => {
-    const can = x.stato !== 'annullato' && x.data > oggi; // annullabile fino al giorno prima
+    const can = x.stato !== 'annullato' && x.data >= oggi && giorniA(x.data) >= CFG.ggAnnullo; // annullabile entro il termine scelto dalla titolare
     return `<div class="row"><div><b>${esc(x.sv)}</b><small>${esc(dl(x.data))}, ${hm(x.inizio)}–${hm(x.fine)} · ${OPS[x.op]}</small>${x.spostato && x.stato !== 'annullato' ? '<small>Appuntamento aggiornato da Mira</small>' : ''}${x.stato !== 'annullato' ? `<small>${IOS ? '' : `<a href="#" data-gcal="${x.id}">📅 Google Calendar</a> · `}<a href="#" data-ics="${x.id}">${ANDROID ? '📅 Altro calendario' : IOS ? '🍎 Calendario iPhone' : '🍎 Apple'}</a></small>` : ''}<span class="st ${B[x.stato][0]}">${B[x.stato][1]}</span></div>${can ? `<button class="x" data-id="${x.id}">Annulla</button>` : ''}</div>`;
   }).join('') : '<p class="hint">Non hai prenotazioni in programma.</p>';
   $$('#mie [data-gcal]').forEach(k => k.onclick = e => { e.preventDefault(); const x = MIE.find(z => z.id === k.dataset.gcal); if (x) apriGoogleCalendar(evDaApp(x)); });
@@ -706,6 +717,8 @@ function avviaCliente() {
 
 /* ===================================================== AREA TITOLARE ===================================================== */
 let A = [], DATA = iso(oggiD()), opSel = 'm', SEL = null, primoCarico = true, ctx = null, suono = false;
+const ANNVISTI = new Set(); try { JSON.parse(localStorage.getItem('mira_annvisti') || '[]').forEach(i => ANNVISTI.add(i)); } catch (e) {}
+const salvaVisti = () => { try { localStorage.setItem('mira_annvisti', JSON.stringify([...ANNVISTI].slice(-200))); } catch (e) {} };
 const attive = () => A.filter(x => x.stato !== 'annullato');
 const occupatoA = (op, data, ini, fin, escl) => attive().some(x => x.id !== escl && x.op === op && x.data === data && x.inizio < fin && x.fine > ini);
 const chiusura = data => { const ap = apertura(new Date(data + 'T00:00')); return ap ? ap[1] : 0; };
@@ -720,7 +733,7 @@ function avviaAdmin() {
   unsubA && unsubA(); A = []; primoCarico = true;
   const da = new Date(); da.setDate(da.getDate() - 30);
   unsubA = onSnapshot(query(collection(dbA, 'appointments'), where('data', '>=', iso(da))), s => {
-    if (!primoCarico) s.docChanges().forEach(c => { if (c.type === 'added' && c.doc.data().stato === 'attesa' && !c.doc.metadata.hasPendingWrites) { bip(); toast('Nuova prenotazione da confermare'); } });
+    if (!primoCarico) s.docChanges().forEach(c => { const q = c.doc.data(); if (c.type === 'modified' && q.stato === 'annullato' && q.annullatoDa === 'cliente' && !c.doc.metadata.hasPendingWrites) { bip(); toast('❌ ' + (q.nome || 'Una cliente') + ' ha annullato: ' + q.sv + ', ' + dl(q.data) + ' ' + hm(q.inizio)); } if (c.type === 'added' && c.doc.data().stato === 'attesa' && !c.doc.metadata.hasPendingWrites) { bip(); toast('Nuova prenotazione da confermare'); } });
     primoCarico = false;
     A = s.docs.map(d => ({ id: d.id, ...d.data() }));
     renderAdmin();
@@ -729,8 +742,13 @@ function avviaAdmin() {
 function renderAdmin() {
   const oggi = iso(oggiD()), attesa = A.filter(x => x.stato === 'attesa' && x.data >= oggi).sort((a, b) => a.data.localeCompare(b.data) || a.inizio - b.inizio);
   $('#aBadge').textContent = attesa.length; $('#aBadge').classList.toggle('zero', !attesa.length);
+  const ann = A.filter(x => x.stato === 'annullato' && x.annullatoDa === 'cliente' && x.data >= oggi && !ANNVISTI.has(x.id)).sort((p, q) => p.data.localeCompare(q.data) || p.inizio - q.inizio);
+  $('#annBox').hidden = !ann.length;
+  $('#annList').innerHTML = ann.map(x => `<div class="pend ann"><b>${esc(x.nome)} ${esc(x.cognome)}</b><small>${esc(x.sv)} · ${OPS[x.op]}</small><small>${esc(dl(x.data))}, ${hm(x.inizio)}–${hm(x.fine)}</small><div class="acts"><button class="bt" data-visto="${x.id}">Ok, visto</button><button class="bt" data-apri="${x.id}">Apri</button></div></div>`).join('');
+  $$('#annList [data-visto]').forEach(b => b.onclick = () => { ANNVISTI.add(b.dataset.visto); salvaVisti(); renderAdmin(); });
+  $$('#annList [data-apri]').forEach(b => b.onclick = () => { const a = A.find(x => x.id === b.dataset.apri); if (a) { DATA = a.data; apri(a.id); renderAgenda(); } });
   $('#pBadge').textContent = attesa.length; $('#pBadge').classList.toggle('zero', !attesa.length);
-  document.title = (attesa.length ? '(' + attesa.length + ') ' : '') + 'Mira – Area riservata';
+  document.title = (attesa.length + ann.length ? '(' + (attesa.length + ann.length) + ') ' : '') + 'Mira – Area riservata';
   $('#pend').innerHTML = attesa.length ? attesa.map(x => `<div class="pend"><b>${esc(x.nome)} ${esc(x.cognome)}</b><small>${esc(x.sv)} · ${OPS[x.op]}</small><small>${esc(dl(x.data))}, ${hm(x.inizio)}–${hm(x.fine)}</small><div class="acts"><button class="bt ok" data-conf="${x.id}">Conferma</button><button class="bt" data-apri="${x.id}">Apri</button></div></div>`).join('') : '<p class="hint">Nessuna prenotazione in attesa.</p>';
   $$('#pend [data-conf]').forEach(b => b.onclick = () => conferma(b.dataset.conf));
   $$('#pend [data-apri]').forEach(b => b.onclick = () => { const a = A.find(x => x.id === b.dataset.apri); if (a) { DATA = a.data; apri(a.id); renderAgenda(); } });
@@ -803,7 +821,7 @@ async function renderDet() {
    <div class="two"><a class="bt pri" href="tel:${esc(tel.replace(/[^\d+]/g, ''))}">Chiama</a><a class="bt" href="https://wa.me/${waNum(tel)}?text=${encodeURIComponent(msgWa(a, altri))}" target="_blank" rel="noopener">WhatsApp</a></div>
    <label>Note private<textarea id="dNote" placeholder="Allergie, preferenze…"></textarea></label><button class="bt" id="dSalva">Salva note</button>
    ${a.stato === 'attesa' ? '<div class="acts"><button class="bt ok" id="dConf">Conferma appuntamento</button></div>' : ''}
-   ${a.stato !== 'annullato' ? `<h4>Sposta</h4><div class="rg"><input type="date" id="dSd" value="${a.data}"><input type="time" id="dSo" step="300" value="${hm(a.inizio)}"></div><div class="acts"><button class="bt" id="dSposta">Sposta</button></div>
+   ${a.stato !== 'annullato' ? `<h4>Sposta</h4><div class="rg"><input type="date" id="dSd" value="${a.data}"><input type="time" id="dSo" step="300" value="${hm(a.inizio)}"></div><label>Operatrice<select id="dSop"></select></label><small id="dSinfo" class="hint" style="display:block;margin:4px 0 0"></small><div class="acts"><button class="bt" id="dSposta">Sposta</button></div>
    <h4>Cambia operatrice</h4><div class="rg"><select id="dOp">${opsOk.map(o => `<option value="${o}">${OPS[o]}</option>`).join('')}</select><button class="bt" id="dCambia" ${opsOk.length ? '' : 'disabled'}>Assegna</button></div>
    <div class="acts"><button class="bt no" id="dAnn">Annulla appuntamento</button></div>` : ''}
    ${altri.length ? '<h4>Altri trattamenti della stessa prenotazione</h4>' + altri.map(x => `<div class="mini"><b>${esc(x.sv)}</b> <small>${hm(x.inizio)}–${hm(x.fine)} · ${OPS[x.op]} · ${x.stato === 'attesa' ? 'in attesa' : 'confermato'}</small></div>`).join('') : ''}
@@ -811,7 +829,20 @@ async function renderDet() {
   $('#dX').onclick = chiudiDet;
   if ($('#dConf')) $('#dConf').onclick = () => conferma(a.id);
   if ($('#dAnn')) $('#dAnn').onclick = () => annullaA(a);
-  if ($('#dSposta')) $('#dSposta').onclick = async () => { try { await muovi(a, a.op, $('#dSd').value, hmIn($('#dSo').value)); toast('Spostato'); } catch (e) { toast(e.message || 'Non riesco a spostare.'); console.error(e); } };
+  if ($('#dSposta')) {
+    const aggOp = () => { // propone solo le operatrici che fanno il trattamento e sono libere nel giorno e orario scelti
+      const d = $('#dSd').value, ini = hmIn($('#dSo').value), fin = ini == null ? 0 : ini + (a.fine - a.inizio), sel = $('#dSop'), prima = sel.value || a.op;
+      const ok = o => d && ini != null && apertura(d) && lavora(o, d, ini, fin) && !occupatoA(o, d, ini, fin, a.id);
+      const L = (sv ? sv.ops : OPK).filter(o => OPS[o] && ok(o));
+      if (!L.includes(a.op) && OPS[a.op] && ok(a.op)) L.unshift(a.op);
+      sel.innerHTML = L.length ? L.map(o => `<option value="${o}">${esc(OPS[o])}${o === a.op ? ' (attuale)' : ''}</option>`).join('') : '<option value="">Nessuna operatrice libera</option>';
+      if (L.includes(prima)) sel.value = prima; else if (L.includes(a.op)) sel.value = a.op;
+      $('#dSinfo').textContent = L.length ? '' : 'Nessuna operatrice è libera in quel giorno e orario.';
+      $('#dSposta').disabled = !L.length;
+    };
+    $('#dSd').onchange = $('#dSo').oninput = $('#dSo').onchange = aggOp; aggOp();
+  }
+  if ($('#dSposta')) $('#dSposta').onclick = async () => { try { await muovi(a, $('#dSop').value || a.op, $('#dSd').value, hmIn($('#dSo').value)); toast('Spostato'); } catch (e) { toast(e.message || 'Non riesco a spostare.'); console.error(e); } };
   if ($('#dCambia')) $('#dCambia').onclick = async () => { try { await muovi(a, $('#dOp').value, a.data, a.inizio); toast('Operatrice cambiata'); } catch (e) { toast(e.message || 'Non riesco a cambiare.'); console.error(e); } };
   const chiave = cifre(tel);
   $('#dSalva').onclick = async () => { if (!chiave) return toast('Manca il numero di telefono.'); try { await setDoc(doc(dbA, 'clienti', chiave), { nome: a.nome, cognome: a.cognome, tel, note: $('#dNote').value.trim() }, { merge: true }); toast('Note salvate'); } catch (e) { console.error(e); toast('Non riesco a salvare le note.'); } };
@@ -911,6 +942,9 @@ function renderImp() {
       <button class="bt no sm" data-f="sv-del" data-c="${ci}" data-s="${si}">Elimina trattamento</button></div>`).join('') +
     `<button class="bt sm" data-f="sv-add" data-c="${ci}">+ Aggiungi trattamento</button></div>`).join('');
   $('#iBody').innerHTML = `<div class="imp"><h2>Impostazioni</h2><p class="hint">Le modifiche valgono per tutte le clienti appena premi “Salva impostazioni”. Gli appuntamenti già fissati restano dove sono: se finiscono fuori orario li vedi segnalati in agenda.</p>
+   <h3>Regole per le clienti</h3><div class="dc impc"><div class="orr"><label class="grow">La cliente può annullare fino a<select data-f="gg-ann">${[[0, 'al momento dell’appuntamento'], [1, '1 giorno prima'], [2, '2 giorni prima'], [3, '3 giorni prima'], [7, '7 giorni prima']].map(([v, t]) => `<option value="${v}" ${d.ggAnnullo === v ? 'selected' : ''}>${t}</option>`).join('')}${[0, 1, 2, 3, 7].includes(d.ggAnnullo) ? '' : `<option value="${d.ggAnnullo}" selected>${d.ggAnnullo} giorni prima</option>`}</select></label></div>
+   <div class="orr"><label class="grow">Massimo di prenotazioni per cliente nello stesso giorno<select data-f="max-g">${[0, 1, 2, 3, 4, 5].map(v => `<option value="${v}" ${d.maxGiorno === v ? 'selected' : ''}>${v === 0 ? 'Nessun limite' : v}</option>`).join('')}${d.maxGiorno > 5 ? `<option value="${d.maxGiorno}" selected>${d.maxGiorno}</option>` : ''}</select></label></div>
+   <p class="hint" style="margin:6px 0 0">Una prenotazione può comprendere più trattamenti. Il limite vale quando la cliente prenota dall’app; tu da “Nuovo appuntamento” puoi sempre inserire quello che vuoi.</p></div>
    <h3>Orari del salone</h3><div class="dc impc">${sal}</div>
    <h3>Operatrici</h3>${ops}<button class="bt" data-f="op-add">+ Nuova operatrice</button>
    <h3>Trattamenti</h3>${cat}<button class="bt" data-f="cat-add">+ Nuova categoria</button></div>`;
@@ -922,6 +956,8 @@ async function impEv(e) {
   let ri = false;
   const ora = (o, k) => { const m = hmIn(val); if (m != null) o[k] = m; };
   switch (f) {
+    case 'gg-ann': DR.ggAnnullo = parseInt(val, 10) || 0; break;
+    case 'max-g': DR.maxGiorno = parseInt(val, 10) || 0; break;
     case 'sal-on': DR.apertura[w] = val ? { da: 540, a: +w === 6 ? 780 : 1140 } : { da: 0, a: 0 }; ri = true; break;
     case 'sal-da': ora(DR.apertura[w], 'da'); break;
     case 'sal-a': ora(DR.apertura[w], 'a'); break;
@@ -1112,7 +1148,7 @@ $('#aSuono').onclick = () => {
 $('#aNuovo').onclick = () => apriManuale();
 $('#cQ').oninput = e => { CQ = e.target.value; if (CLI) renderClienti(); };
 $$('#atabs button').forEach(b => b.onclick = () => vistaAdmin(b.dataset.v));
-$('#aBadgeBtn').onclick = () => $('#pend').scrollIntoView({ behavior: 'smooth' });
+$('#aBadgeBtn').onclick = () => ($('#annBox').hidden ? $('#pend') : $('#annBox')).scrollIntoView({ behavior: 'smooth' });
 $('#dPrev').onclick = () => { const d = new Date(DATA + 'T00:00'); d.setDate(d.getDate() - 1); DATA = iso(d); renderAgenda(); };
 $('#dNext').onclick = () => { const d = new Date(DATA + 'T00:00'); d.setDate(d.getDate() + 1); DATA = iso(d); renderAgenda(); };
 $('#dOggi').onclick = () => { DATA = iso(oggiD()); renderAgenda(); };
