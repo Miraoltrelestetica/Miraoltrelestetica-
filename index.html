@@ -228,6 +228,7 @@ textarea{min-height:84px;resize:vertical}
 .bt.no{color:var(--wait);border-color:var(--wait);background:none}
 .bt:disabled{opacity:.5;cursor:not-allowed}
 .badge{display:inline-flex;min-width:1.7em;height:1.7em;padding:0 .5em;align-items:center;justify-content:center;border-radius:999px;background:var(--wait);color:#fff;font:700 .85rem "DM Sans",sans-serif;vertical-align:middle}
+.stor{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}.stor summary{cursor:pointer;font-weight:700;list-style:revert}.stor .mini{margin-top:6px}
 .pend.ann{border-left:4px solid #8a8a8a}
 .badge.zero{background:var(--line);color:var(--mute)}
 .agrid{display:grid;gap:22px;margin-top:8px}
@@ -703,7 +704,7 @@ function renderMie() {
     try {
       const batch = writeBatch(db);
       batch.update(doc(db, 'appointments', x.id), { stato: 'annullato', annullatoDa: 'cliente' });
-      blocchi(x).forEach(id => batch.delete(doc(db, 'busy', id)));
+      [...blocchi(x), ...(x.extra || [])].forEach(id => batch.delete(doc(db, 'busy', id)));
       await batch.commit();
     } catch (e) { console.error(e); b.disabled = false; toast('Non riesco ad annullare. Riprova o contattaci.'); }
   });
@@ -711,7 +712,7 @@ function renderMie() {
 function avviaCliente() {
   unsubM && unsubM(); MIE = [];
   unsubM = onSnapshot(query(collection(db, 'appointments'), where('uid', '==', U.uid)),
-    s => { MIE = s.docs.map(d => ({ id: d.id, ...d.data() })); renderMie(); },
+    s => { MIE = s.docs.map(d => { const x = { id: d.id, ...d.data() }; if (x.prima) { x.extra = blocchi(x); Object.assign(x, x.prima, { stato: 'confermato' }); } return x; }); renderMie(); },
     e => console.error('mie', e));
 }
 
@@ -720,7 +721,7 @@ let A = [], DATA = iso(oggiD()), opSel = 'm', SEL = null, primoCarico = true, ct
 const ANNVISTI = new Set(); try { JSON.parse(localStorage.getItem('mira_annvisti') || '[]').forEach(i => ANNVISTI.add(i)); } catch (e) {}
 const salvaVisti = () => { try { localStorage.setItem('mira_annvisti', JSON.stringify([...ANNVISTI].slice(-200))); } catch (e) {} };
 const attive = () => A.filter(x => x.stato !== 'annullato');
-const occupatoA = (op, data, ini, fin, escl) => attive().some(x => x.id !== escl && x.op === op && x.data === data && x.inizio < fin && x.fine > ini);
+const occupatoA = (op, data, ini, fin, escl) => attive().some(x => x.id !== escl && [x, x.prima].some(y => y && y.op === op && y.data === data && y.inizio < fin && y.fine > ini)); // conta anche l’orario che la cliente vede ancora
 const chiusura = data => { const ap = apertura(new Date(data + 'T00:00')); return ap ? ap[1] : 0; };
 
 function bip() {
@@ -781,24 +782,31 @@ function renderAgenda() {
 }
 function apri(id) { SEL = id; renderDet(); renderAgenda(); if (innerWidth >= 1100) $('#det').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
 function chiudiDet() { SEL = null; $('#det').hidden = true; renderAgenda(); }
-async function conferma(id) { try { const b = writeBatch(dbA); b.update(doc(dbA, 'appointments', id), { stato: 'confermato' }); await b.commit(); toast('Confermato'); } catch (e) { console.error(e); toast('Non riesco a confermare. Riprova.'); } }
+async function conferma(id) { try { const a = A.find(x => x.id === id), b = writeBatch(dbA);
+    if (a && a.prima) { const nu = new Set(blocchi(a)); blocchi(a.prima).forEach(k => { if (!nu.has(k)) b.delete(doc(dbA, 'busy', k)); }); b.update(doc(dbA, 'appointments', id), { stato: 'confermato', prima: null, spostato: true }); }
+    else b.update(doc(dbA, 'appointments', id), { stato: 'confermato' });
+    await b.commit(); toast(a && a.prima ? 'Spostamento confermato: la cliente è stata aggiornata' : 'Confermato'); } catch (e) { console.error(e); toast('Non riesco a confermare. Riprova.'); } }
 async function annullaA(a) {
   if (!await chiedi('Annullare l’appuntamento?', a.nome + ' ' + a.cognome + ' · ' + a.sv + ' · ' + dl(a.data) + ', ' + hm(a.inizio) + '. L’orario tornerà libero.', 'Sì, annulla', 'No, tienilo', true)) return;
-  try { const b = writeBatch(dbA); b.update(doc(dbA, 'appointments', a.id), { stato: 'annullato', annullatoDa: 'titolare' }); blocchi(a).forEach(id => b.delete(doc(dbA, 'busy', id))); await b.commit(); toast('Annullato'); chiudiDet(); }
+  try { const b = writeBatch(dbA); b.update(doc(dbA, 'appointments', a.id), { stato: 'annullato', annullatoDa: 'titolare' }); [...blocchi(a), ...(a.prima ? blocchi(a.prima) : [])].forEach(id => b.delete(doc(dbA, 'busy', id))); await b.commit(); toast('Annullato'); chiudiDet(); }
   catch (e) { console.error(e); toast('Non riesco ad annullare. Riprova.'); }
 }
-async function muovi(a, op, data, ini) { // sposta e/o cambia operatrice; resta confermato in automatico
+async function muovi(a, op, data, ini) { // sposta e/o cambia operatrice. La cliente continua a vedere l’orario confermato finché la titolare non preme "Conferma"
   const fin = ini + (a.fine - a.inizio), sv = SV.find(s => s.nome === a.sv);
   if (ini == null || !data) throw new Error('Inserisci data e ora.');
   if (sv && !sv.ops.includes(op)) throw new Error(OPS[op] + ' non fa questo trattamento.');
   if (!apertura(data)) throw new Error('Quel giorno il salone è chiuso.');
   if (!lavora(op, data, ini, fin)) throw new Error(OPS[op] + ' non lavora in quell’orario (orari o ferie).');
   if (occupatoA(op, data, ini, fin, a.id)) throw new Error(OPS[op] + ' è già occupata in quell’orario.');
-  const vecchi = new Set(blocchi(a)), nuovi = blocchi(a, op, data, ini, fin), b = writeBatch(dbA);
-  vecchi.forEach(id => { if (!nuovi.includes(id)) b.delete(doc(dbA, 'busy', id)); });
-  nuovi.forEach(id => { if (!vecchi.has(id)) { const [d, o, m] = id.split('_'); b.set(doc(dbA, 'busy', id), { data: d, op: o, m: +m, aid: a.id, uid: a.uid }); } });
-  b.update(doc(dbA, 'appointments', a.id), { data, op, inizio: ini, fine: fin, stato: 'confermato', spostato: true });
+  const base = a.prima || (a.stato === 'confermato' ? { data: a.data, op: a.op, inizio: a.inizio, fine: a.fine } : null); // ciò che la cliente vede ora
+  const vecchi = new Set(blocchi(a)), tieni = new Set(base ? blocchi(base) : []), nuovi = blocchi(a, op, data, ini, fin), b = writeBatch(dbA);
+  vecchi.forEach(id => { if (!nuovi.includes(id) && !tieni.has(id)) b.delete(doc(dbA, 'busy', id)); });
+  nuovi.forEach(id => { if (!vecchi.has(id) && !tieni.has(id)) { const [d, o, m] = id.split('_'); b.set(doc(dbA, 'busy', id), { data: d, op: o, m: +m, aid: a.id, uid: a.uid }); } });
+  const tornato = base && base.data === data && base.op === op && base.inizio === ini; // rimesso dov’era: nessuna modifica da confermare
+  b.update(doc(dbA, 'appointments', a.id), tornato ? { data, op, inizio: ini, fine: fin, stato: 'confermato', prima: null }
+    : base ? { data, op, inizio: ini, fine: fin, stato: 'attesa', prima: base } : { data, op, inizio: ini, fine: fin });
   await b.commit(); DATA = data;
+  return !!base && !tornato;
 }
 /* Messaggio WhatsApp preimpostato: ricorda l'appuntamento (e gli altri trattamenti della stessa visita) */
 const linkInvito = (id, k) => location.origin + location.pathname + '#i=' + id + '.' + k;
@@ -808,6 +816,7 @@ function msgWa(a, altri) {
   const link = a.invito ? '\nPer vederlo nell’app, aggiungerlo al calendario o annullarlo apri questo link:\n' + linkInvito(a.id, a.invito) : '';
   return 'Ciao ' + (a.nome || '') + '! 💗\nTi scriviamo da Mira – oltre l’estetica per ricordarti il tuo appuntamento di ' + dl(a.data) + ':\n' + righe + link + '\nCi confermi che ci sei? Grazie e a presto!';
 }
+let STOR_APERTO = false;
 async function renderDet() {
   const a = A.find(x => x.id === SEL), el = $('#det');
   if (!a) { el.hidden = true; return; }
@@ -817,6 +826,7 @@ async function renderDet() {
   el.innerHTML = `<div class="dc"><button class="ind" id="dX" style="padding-top:0">‹ Chiudi</button>
    <h3>${esc(a.sv)}</h3><span class="st ${stato[0]}">${stato[1]}</span>
    <p style="margin-top:10px"><b>${esc(dl(a.data))}</b>, ${hm(a.inizio)}–${hm(a.fine)} · ${OPS[a.op]}</p>
+   ${a.prima ? `<p class="hint" style="margin:0 0 8px">Spostamento da confermare. La cliente vede ancora: ${esc(dl(a.prima.data))}, ${hm(a.prima.inizio)}–${hm(a.prima.fine)} · ${OPS[a.prima.op]}. Premi “Conferma” per avvisarla.</p>` : ''}
    <h4>Cliente</h4><p><b>${esc(a.nome)} ${esc(a.cognome)}</b><br>${esc(tel)}</p>
    <div class="two"><a class="bt pri" href="tel:${esc(tel.replace(/[^\d+]/g, ''))}">Chiama</a><a class="bt" href="https://wa.me/${waNum(tel)}?text=${encodeURIComponent(msgWa(a, altri))}" target="_blank" rel="noopener">WhatsApp</a></div>
    <label>Note private<textarea id="dNote" placeholder="Allergie, preferenze…"></textarea></label><button class="bt" id="dSalva">Salva note</button>
@@ -825,7 +835,8 @@ async function renderDet() {
    <h4>Cambia operatrice</h4><div class="rg"><select id="dOp">${opsOk.map(o => `<option value="${o}">${OPS[o]}</option>`).join('')}</select><button class="bt" id="dCambia" ${opsOk.length ? '' : 'disabled'}>Assegna</button></div>
    <div class="acts"><button class="bt no" id="dAnn">Annulla appuntamento</button></div>` : ''}
    ${altri.length ? '<h4>Altri trattamenti della stessa prenotazione</h4>' + altri.map(x => `<div class="mini"><b>${esc(x.sv)}</b> <small>${hm(x.inizio)}–${hm(x.fine)} · ${OPS[x.op]} · ${x.stato === 'attesa' ? 'in attesa' : 'confermato'}</small></div>`).join('') : ''}
-   <h4>Storico cliente</h4><div id="dStorico"><small>Caricamento…</small></div></div>`;
+   <details id="dSt" class="stor" ${STOR_APERTO ? 'open' : ''}><summary>Storico cliente <span id="dStN"></span></summary><div id="dStorico"><small>Caricamento…</small></div></details></div>`;
+  $('#dSt').addEventListener('toggle', e => { STOR_APERTO = e.target.open; });
   $('#dX').onclick = chiudiDet;
   if ($('#dConf')) $('#dConf').onclick = () => conferma(a.id);
   if ($('#dAnn')) $('#dAnn').onclick = () => annullaA(a);
@@ -842,8 +853,8 @@ async function renderDet() {
     };
     $('#dSd').onchange = $('#dSo').oninput = $('#dSo').onchange = aggOp; aggOp();
   }
-  if ($('#dSposta')) $('#dSposta').onclick = async () => { try { await muovi(a, $('#dSop').value || a.op, $('#dSd').value, hmIn($('#dSo').value)); toast('Spostato'); } catch (e) { toast(e.message || 'Non riesco a spostare.'); console.error(e); } };
-  if ($('#dCambia')) $('#dCambia').onclick = async () => { try { await muovi(a, $('#dOp').value, a.data, a.inizio); toast('Operatrice cambiata'); } catch (e) { toast(e.message || 'Non riesco a cambiare.'); console.error(e); } };
+  if ($('#dSposta')) $('#dSposta').onclick = async () => { try { const att = await muovi(a, $('#dSop').value || a.op, $('#dSd').value, hmIn($('#dSo').value)); toast(att ? 'Spostato: la cliente lo vedrà dopo la tua conferma' : 'Spostato'); } catch (e) { toast(e.message || 'Non riesco a spostare.'); console.error(e); } };
+  if ($('#dCambia')) $('#dCambia').onclick = async () => { try { const att = await muovi(a, $('#dOp').value, a.data, a.inizio); toast(att ? 'Operatrice cambiata: la cliente lo vedrà dopo la tua conferma' : 'Operatrice cambiata'); } catch (e) { toast(e.message || 'Non riesco a cambiare.'); console.error(e); } };
   const chiave = cifre(tel);
   $('#dSalva').onclick = async () => { if (!chiave) return toast('Manca il numero di telefono.'); try { await setDoc(doc(dbA, 'clienti', chiave), { nome: a.nome, cognome: a.cognome, tel, note: $('#dNote').value.trim() }, { merge: true }); toast('Note salvate'); } catch (e) { console.error(e); toast('Non riesco a salvare le note.'); } };
   if (chiave) {
@@ -851,7 +862,7 @@ async function renderDet() {
     getDocs(query(collection(dbA, 'appointments'), where('tel', '==', tel))).then(s => {
       if (SEL !== a.id || !$('#dStorico')) return;
       const L = s.docs.map(d => ({ id: d.id, ...d.data() })).filter(x => x.id !== a.id).sort((p, q) => q.data.localeCompare(p.data) || q.inizio - p.inizio).slice(0, 12);
-      $('#dStorico').innerHTML = L.length ? L.map(x => `<div class="mini"><b>${esc(x.sv)}</b> <small>${esc(dl(x.data))}, ${hm(x.inizio)} · ${OPS[x.op]} · ${x.stato}</small></div>`).join('') : '<small>Nessun altro appuntamento.</small>';
+      $('#dStN').textContent = L.length ? '(' + L.length + ')' : ''; $('#dStorico').innerHTML = L.length ? L.map(x => `<div class="mini"><b>${esc(x.sv)}</b> <small>${esc(dl(x.data))}, ${hm(x.inizio)} · ${OPS[x.op]} · ${x.stato}</small></div>`).join('') : '<small>Nessun altro appuntamento.</small>';
     }).catch(() => { if ($('#dStorico')) $('#dStorico').innerHTML = '<small>Storico non disponibile.</small>'; });
   } else $('#dStorico').innerHTML = '<small>—</small>';
 }
