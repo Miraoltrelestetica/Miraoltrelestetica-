@@ -179,6 +179,21 @@ textarea{min-height:84px;resize:vertical}
 /* Area titolare */
 .aw{width:100%;max-width:2000px;margin:0 auto;padding:0 18px 48px}
 @media(min-width:820px){.aw{padding:0 32px 56px}}
+.cpag{display:grid;gap:18px;margin-top:8px}
+@media(min-width:1100px){.cpag{grid-template-columns:400px minmax(0,1fr);align-items:start}.cback{display:none}}
+@media(max-width:1099px){.cpag.det .clist{display:none}.cpag:not(.det) #cD{display:none}}
+.clist{background:var(--surf);border:1.5px solid var(--line);border-radius:22px;padding:16px;box-shadow:var(--sh)}
+.clist input{width:100%;margin:0 0 8px}
+#cL{max-height:68vh;overflow:auto}
+.cnt{font:500 .85rem "Hanken Grotesk",sans-serif;color:var(--mute);margin-left:6px}
+.ci{display:flex;align-items:center;gap:12px;width:100%;padding:9px 10px;border:0;background:none;border-radius:14px;text-align:left;cursor:pointer;font:inherit;color:inherit}
+.ci small{display:block;color:var(--mute)}
+.ci[aria-pressed="true"]{background:color-mix(in srgb,var(--acc) 12%,transparent)}
+@media(hover:hover){.ci:hover{background:color-mix(in srgb,var(--acc) 8%,transparent)}}
+.cav{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--acc) 14%,transparent);color:var(--acc);font-weight:700;font-size:.85rem}
+.cav.big{width:56px;height:56px;font-size:1.1rem}
+.chead{display:flex;align-items:center;gap:14px;margin:10px 0 4px}.chead h3{margin:0}.chead p{margin:2px 0 0}
+.cvuota{display:grid;place-items:center;min-height:200px;text-align:center}
 .atop{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:16px 0 8px}
 .atop .top{padding:0}
 .acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
@@ -336,10 +351,13 @@ textarea{min-height:84px;resize:vertical}
      <div id="pend"></div>
     </aside>
    </div>
+   <div class="cpag" id="cpag" hidden>
+    <div class="clist"><h2 style="margin:0 0 8px">Clienti <span class="cnt" id="cCount"></span></h2><input id="cQ" type="search" placeholder="Cerca per nome o telefono" autocomplete="off"><div id="cL"></div></div>
+    <div id="cD"></div>
+   </div>
   </div>
  </div>
  <div id="man" class="modal" hidden></div>
- <div id="cli" class="modal" hidden></div>
 </div>
 
 <div class="calq" id="dlg" hidden role="dialog" aria-modal="true" style="z-index:90"><div><h3 id="dlgT"></h3><p id="dlgP"></p><div class="cqb"><button class="si" id="dlgOk"></button><button class="no" id="dlgNo"></button></div></div></div>
@@ -741,42 +759,49 @@ async function caricaClienti() {
     .sort((p, q) => (p.cognome + ' ' + p.nome).localeCompare(q.cognome + ' ' + q.nome, 'it'));
 }
 const dlA = s => new Date(s + 'T00:00').toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
+let CSEL = null, CQ = '';
+const inizC = c => ((c.nome || '?')[0] + (c.cognome || '')[0]).toUpperCase();
+function vistaClienti(on) {
+  $('#cpag').hidden = !on; $('.agrid').hidden = on; $('#aClienti').textContent = on ? 'Agenda' : 'Clienti';
+}
 async function apriClienti() {
-  const m = $('#cli'); m.hidden = false;
-  m.innerHTML = '<div class="dc"><button class="ind" id="cX" style="padding-top:0">‹ Chiudi</button><h3>Clienti</h3><p class="hint">Caricamento…</p></div>';
-  $('#cX').onclick = () => { m.hidden = true; };
-  try { await caricaClienti(); } catch (e) { console.error(e); m.querySelector('.hint').textContent = 'Non riesco a caricare i clienti.'; return; }
-  elencoClienti('');
+  if (!$('#cpag').hidden) { vistaClienti(false); return; }
+  vistaClienti(true); CSEL = null; $('#cpag').classList.remove('det');
+  $('#cL').innerHTML = '<p class="hint">Caricamento…</p>'; $('#cD').innerHTML = '';
+  try { await caricaClienti(); } catch (e) { console.error(e); $('#cL').innerHTML = '<p class="hint">Non riesco a caricare i clienti.</p>'; return; }
+  renderClienti();
 }
-function elencoClienti(q) {
-  const m = $('#cli'), t = q.trim().toLowerCase(), k = cifre(q);
+function renderClienti() {
+  const t = CQ.trim().toLowerCase(), k = cifre(CQ);
   const L = CLI.filter(c => !t || (c.nome + ' ' + c.cognome).toLowerCase().includes(t) || (c.cognome + ' ' + c.nome).toLowerCase().includes(t) || (k && c.k.includes(k)));
-  m.innerHTML = `<div class="dc"><button class="ind" id="cX" style="padding-top:0">‹ Chiudi</button><h3>Clienti <small style="font:500 .9rem 'Hanken Grotesk',sans-serif;color:var(--mute)">${CLI.length}</small></h3>
-   <input id="cQ" type="search" placeholder="Cerca per nome o telefono" value="${esc(q)}" autocomplete="off" style="width:100%;margin:8px 0">
-   ${L.length ? L.map(c => `<button class="mini" data-k="${c.k}" style="display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);cursor:pointer;font:inherit;color:inherit"><b>${esc(c.cognome)} ${esc(c.nome)}</b> <small>${esc(c.tel)}</small></button>`).join('') : '<p class="hint">Nessuna cliente trovata.</p>'}</div>`;
-  $('#cX').onclick = () => { m.hidden = true; };
-  const inp = $('#cQ'); inp.oninput = () => { const p = inp.selectionStart; elencoClienti(inp.value); const n = $('#cQ'); n.focus(); n.setSelectionRange(p, p); };
-  $$('#cli [data-k]').forEach(b => b.onclick = () => schedaCliente(b.dataset.k, q));
+  $('#cCount').textContent = CLI.length + (CLI.length === 1 ? ' cliente' : ' clienti');
+  $('#cL').innerHTML = L.length ? L.map(c => `<button class="ci" data-k="${c.k}" aria-pressed="${c.k === CSEL}"><span class="cav">${esc(inizC(c))}</span><span><b>${esc(c.cognome)} ${esc(c.nome)}</b><small>${esc(c.tel)}</small></span></button>`).join('') : '<p class="hint">Nessuna cliente trovata.</p>';
+  $$('#cL .ci').forEach(b => b.onclick = () => { CSEL = b.dataset.k; $('#cpag').classList.add('det'); renderClienti(); });
+  schedaCliente();
 }
-function schedaCliente(k, q) {
-  const c = CLI.find(x => x.k === k), m = $('#cli'); if (!c) return elencoClienti(q || '');
+function schedaCliente() {
+  const c = CLI.find(x => x.k === CSEL), el = $('#cD');
+  if (!c) { el.innerHTML = '<div class="dc cvuota"><p class="hint" style="margin:0">Scegli una cliente dall’elenco per vedere la scheda.</p></div>'; return; }
   const wa = 'Ciao ' + c.nome + '! 💗 Ti scriviamo da Mira – oltre l’estetica.';
-  m.innerHTML = `<div class="dc"><button class="ind" id="cB" style="padding-top:0">‹ Elenco clienti</button>
-   <h3>${esc(c.nome)} ${esc(c.cognome)}</h3><p>${esc(c.tel)}</p><p><small style="color:var(--mute)">Primo appuntamento: ${esc(dlA(c.prima))}</small></p>
+  el.innerHTML = `<div class="dc"><button class="ind cback" id="cB" style="padding-top:0">‹ Elenco clienti</button>
+   <div class="chead"><span class="cav big">${esc(inizC(c))}</span><div><h3>${esc(c.nome)} ${esc(c.cognome)}</h3><p>${esc(c.tel)}</p></div></div>
+   <p><small style="color:var(--mute)">Primo appuntamento: ${esc(dlA(c.prima))}</small></p>
    <div class="two"><a class="bt pri" href="tel:${esc(c.tel.replace(/[^\d+]/g, ''))}">Chiama</a><a class="bt" href="https://wa.me/${waNum(c.tel)}?text=${encodeURIComponent(wa)}" target="_blank" rel="noopener">WhatsApp</a></div>
+   <div class="acts"><button class="bt pri" id="cApp">+ Nuovo appuntamento</button></div>
    <label>Note private<textarea id="cN" placeholder="Allergie, preferenze…">${esc(c.note)}</textarea></label><button class="bt" id="cS">Salva note</button>
-   <div class="acts" style="margin-top:18px"><button class="bt no" id="cD">Elimina scheda cliente</button></div></div>`;
-  $('#cB').onclick = () => elencoClienti(q || '');
-  $('#cS').onclick = async () => { try { const note = $('#cN').value.trim(); await setDoc(doc(dbA, 'clienti', k), { nome: c.nome, cognome: c.cognome, tel: c.tel, note }, { merge: true }); c.note = note; toast('Note salvate'); } catch (e) { console.error(e); toast('Non riesco a salvare le note.'); } };
-  $('#cD').onclick = async () => {
+   <div class="acts" style="margin-top:18px"><button class="bt no" id="cDel">Elimina scheda cliente</button></div></div>`;
+  $('#cB').onclick = () => { $('#cpag').classList.remove('det'); };
+  $('#cApp').onclick = () => apriManuale(c);
+  $('#cS').onclick = async () => { try { const note = $('#cN').value.trim(); await setDoc(doc(dbA, 'clienti', c.k), { nome: c.nome, cognome: c.cognome, tel: c.tel, note }, { merge: true }); c.note = note; toast('Note salvate'); } catch (e) { console.error(e); toast('Non riesco a salvare le note.'); } };
+  $('#cDel').onclick = async () => {
     if (!await chiedi('Eliminare la scheda cliente?', c.nome + ' ' + c.cognome + ' · le note private verranno cancellate. Gli appuntamenti restano in agenda. La scheda ricompare solo se la cliente prenota di nuovo.', 'Sì, elimina', 'No, tienila', true)) return;
-    try { await setDoc(doc(dbA, 'clienti', k), { eliminato: Date.now() }); CLI = CLI.filter(x => x.k !== k); toast('Scheda eliminata'); elencoClienti(''); }
+    try { await setDoc(doc(dbA, 'clienti', c.k), { eliminato: Date.now() }); CLI = CLI.filter(x => x.k !== c.k); CSEL = null; $('#cpag').classList.remove('det'); toast('Scheda eliminata'); renderClienti(); }
     catch (e) { console.error(e); toast('Non riesco a eliminare la scheda.'); }
   };
 }
 
 /* Nuovo appuntamento manuale (telefono o negozio): nasce già confermato */
-function apriManuale() {
+function apriManuale(cl) {
   let g = '', c = '';
   SV.forEach(s => { if (s.cat !== c) { if (g) g += '</optgroup>'; c = s.cat; g += `<optgroup label="${esc(c)}">`; } g += `<option value="${s.id}">${esc(s.nome)} (${fd(s.min)})</option>`; }); g += '</optgroup>';
   $('#man').innerHTML = `<div class="dc"><button class="ind" id="mX" style="padding-top:0">‹ Chiudi</button><h3>Nuovo appuntamento</h3>
@@ -787,6 +812,7 @@ function apriManuale() {
    <p id="mErr" class="err" role="alert"></p><button class="cta" id="mOk" style="margin-top:0">Salva appuntamento</button></div>`;
   $('#man').hidden = false;
   const agg = () => { const sv = SV[+$('#mSv').value]; $('#mOp').innerHTML = sv.ops.map(o => `<option value="${o}">${OPS[o]}</option>`).join(''); };
+  if (cl && cl.tel) { $('#mT').value = cl.tel; $('#mN').value = cl.nome || ''; $('#mC').value = cl.cognome || ''; }
   agg(); $('#mSv').onchange = agg; $('#mX').onclick = () => $('#man').hidden = true;
   $('#mT').onblur = async () => { const k = cifre($('#mT').value); if (k.length < 6 || ($('#mN').value && $('#mC').value)) return; try { if (!CLI) await caricaClienti(); const c = CLI.find(x => x.k === k); if (c && !($('#mN').value && $('#mC').value)) { $('#mN').value = c.nome || ''; $('#mC').value = c.cognome || ''; } } catch (e) {} };
   $('#mOk').onclick = async () => {
@@ -803,7 +829,7 @@ function apriManuale() {
       b.set(ref, { uid: 'manuale', gruppo: ref.id, nome, cognome, tel, sv: sv.nome, op, data, inizio: ini, fine: fin, stato: 'confermato', creato: Date.now(), manuale: true });
       blocchi({ op, data, inizio: ini, fine: fin }).forEach(id => b.set(doc(dbA, 'busy', id), { data, op, m: +id.split('_')[2], aid: ref.id, uid: 'manuale' }));
       b.set(doc(dbA, 'clienti', cifre(tel)), { nome, cognome, tel }, { merge: true });
-      await b.commit(); CLI = null; DATA = data; $('#man').hidden = true; toast('Appuntamento salvato'); renderAgenda();
+      await b.commit(); CLI = null; DATA = data; $('#man').hidden = true; toast('Appuntamento salvato'); vistaClienti(false); renderAgenda();
     } catch (e) { console.error(e); err.textContent = e.code === 'permission-denied' ? 'Orario occupato o permessi mancanti.' : 'Non riesco a salvare. Riprova.'; $('#mOk').disabled = false; }
   };
 }
@@ -883,12 +909,13 @@ $('#aEntra').onclick = async () => {
   $('#aEntra').disabled = false;
 };
 $('#aPass').onkeydown = e => { if (e.key === 'Enter') $('#aEntra').click(); };
-$('#aEsci').onclick = () => { unsubA && unsubA(); unsubA = null; SEL = null; CLI = null; signOut(authA); };
+$('#aEsci').onclick = () => { unsubA && unsubA(); unsubA = null; SEL = null; CLI = null; vistaClienti(false); signOut(authA); };
 $('#aSuono').onclick = () => {
   if (!ctx) { try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { toast('Questo browser non supporta i suoni.'); return; } }
   ctx.resume(); suono = !suono; $('#aSuono').textContent = suono ? '🔔 Suoni attivi' : '🔕 Attiva suoni'; if (suono) bip();
 };
-$('#aNuovo').onclick = apriManuale;
+$('#aNuovo').onclick = () => apriManuale();
+$('#cQ').oninput = e => { CQ = e.target.value; if (CLI) renderClienti(); };
 $('#aClienti').onclick = apriClienti;
 $('#aBadgeBtn').onclick = () => $('#pend').scrollIntoView({ behavior: 'smooth' });
 $('#dPrev').onclick = () => { const d = new Date(DATA + 'T00:00'); d.setDate(d.getDate() - 1); DATA = iso(d); renderAgenda(); };
