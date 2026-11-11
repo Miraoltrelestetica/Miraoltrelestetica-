@@ -690,7 +690,7 @@ $('#calG').onclick = e => { e.preventDefault(); if (ULTIMA) apriGoogleCalendar(U
 
 function renderMie() {
   $('#notaAnn') && ($('#notaAnn').textContent = testoAnnullo() + ' Per modifiche dell’ultimo momento contattaci.');
-  const oggi = iso(oggiD()), L = MIE.filter(x => x.data >= oggi && !(x.stato === 'annullato' && x.annullatoDa === 'cliente')).sort((a, b) => a.data.localeCompare(b.data) || a.inizio - b.inizio);
+  const oggi = iso(oggiD()), L = MIE.filter(x => x.data >= oggi && !(x.stato === 'annullato' && x.annullatoDa === 'cliente')) // le annullate da Mira restano visibili fino al giorno della prenotazione compreso.sort((a, b) => a.data.localeCompare(b.data) || a.inizio - b.inizio);
   const B = { attesa: ['r', 'In attesa di conferma'], confermato: ['v', 'Confermato'], annullato: ['g', 'Annullato da Mira'] };
   $('#mie').innerHTML = L.length ? L.map(x => {
     const can = x.stato !== 'annullato' && x.data >= oggi && giorniA(x.data) >= CFG.ggAnnullo; // annullabile entro il termine scelto dalla titolare
