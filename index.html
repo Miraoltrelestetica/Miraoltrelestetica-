@@ -318,6 +318,7 @@ textarea{min-height:84px;resize:vertical}
     <div class="acts">
      <button class="bt" id="aBadgeBtn">Da confermare <span class="badge zero" id="aBadge">0</span></button>
      <button class="bt" id="aSuono">🔕 Attiva suoni</button>
+     <button class="bt" id="aRialli">Sblocca orari</button>
      <button class="bt pri" id="aNuovo">+ Nuovo appuntamento</button>
      <button class="bt" id="aEsci">Esci</button>
     </div>
@@ -465,12 +466,22 @@ function renderCal() {
   $('#cn').onclick = () => { S.mese.setMonth(mo + 1); renderCal(); };
   $$('#cal [data-d]').forEach(b => b.onclick = () => scegliGiorno(b.dataset.d));
 }
-async function scegliGiorno(d) {
+let unsubBusy = null;
+/* Gli orari liberi sono "dal vivo": se qualcuno prenota o annulla mentre la cliente guarda, la lista si aggiorna da sola */
+function scegliGiorno(d) {
   S.data = d; S.ora = null;
   $$('#cal [data-d]').forEach(b => b.setAttribute('aria-pressed', b.dataset.d === d));
   $('#slots').innerHTML = '<p class="hint">Cerco gli orari liberi…</p>';
-  try { S.occ = await occupati(d); } catch (e) { console.error(e); $('#slots').innerHTML = '<p class="hint">Non riesco a caricare gli orari. Controlla la connessione e riprova.</p>'; return; }
-  if (S.data !== d) return;
+  unsubBusy && unsubBusy();
+  unsubBusy = onSnapshot(query(collection(db, 'busy'), where('data', '==', d)), s => {
+    if (S.data !== d) return;
+    S.occ = new Set(s.docs.map(x => x.data().op + '_' + x.data().m));
+    disegnaSlots();
+    if (S.ora != null && !$('#p3').hidden) aggiornaOps();
+  }, e => { console.error(e); $('#slots').innerHTML = '<p class="hint">Non riesco a caricare gli orari. Controlla la connessione e riprova.</p>'; });
+}
+function disegnaSlots() {
+  const d = S.data;
   const [a, c] = apertura(new Date(d + 'T00:00')), now = new Date(), nm = now.getHours() * 60 + now.getMinutes(), oggi = iso(now) === d, L = [];
   for (let t = a; t + tot() <= c; t += PASSO) {
     if (oggi && t <= nm) continue;
@@ -478,6 +489,12 @@ async function scegliGiorno(d) {
   }
   $('#slots').innerHTML = L.length ? `<div class="gl" style="width:100%">${esc(dl(d))}</div>` + L.map(t => `<button class="slot" data-t="${t}">${hm(t)}</button>`).join('') : '<p class="hint">Nessun orario libero in questo giorno per la durata scelta. Prova un altro giorno.</p>';
   $$('#slots .slot').forEach(b => b.onclick = () => { S.ora = +b.dataset.t; S.sc = S.sel.map(() => 'q'); renderOps(); vai(3); });
+}
+function aggiornaOps() { // la cliente è già alla scelta dell'operatrice e gli orari sono cambiati
+  const pl = piano(S.ora);
+  if (!pl.every(p => liberi(p).length)) { toast('Quell’orario è stato appena occupato: scegline un altro.'); S.ora = null; vai(2); return; }
+  S.sc = S.sc.map((o, i) => o === 'q' || liberi(pl[i]).includes(o) ? o : 'q');
+  renderOps();
 }
 function renderOps() {
   $('#ops').innerHTML = piano(S.ora).map((p, i) => `<div class="opc"><b>${esc(p.sv.nome)}</b><small>${esc(dl(S.data))}, ${hm(p.ini)}–${hm(p.fin)}</small><div class="slots">` +
@@ -511,6 +528,7 @@ async function invia() {
     ULTIMA = { id: gid, sv: pl.map(p => p.sv.nome).join(' + '), data: S.data, ini: pl[0].ini, fin: pl[pl.length - 1].fin,
       desc: pl.map((p, i) => hm(p.ini) + '-' + hm(p.fin) + ' ' + p.sv.nome + ' (' + (S.sc[i] === 'q' ? 'operatrice da confermare' : OPS[S.sc[i]]) + ')').join('\n') + '\nAppuntamento prenotato online.' };
     $('#calG').href = gcalUrl(ULTIMA);
+    unsubBusy && unsubBusy(); unsubBusy = null;
     S.sel = []; S.data = S.ora = null; renderSv(); vai(5);
     setTimeout(() => chiediCalendario(ULTIMA), 500);
   } catch (e) {
@@ -698,6 +716,25 @@ async function renderDet() {
   } else $('#dStorico').innerHTML = '<small>—</small>';
 }
 
+/* Libera i blocchi di tempo rimasti senza un appuntamento attivo (controllando ogni volta lo stato vero sul server) */
+async function riallinea() {
+  const btn = $('#aRialli'); btn.disabled = true;
+  try {
+    const s = await getDocs(query(collection(dbA, 'busy'), where('data', '>=', iso(oggiD())))), perApp = {}, daLiberare = [], dettagli = [];
+    s.docs.forEach(d => (perApp[d.data().aid] = perApp[d.data().aid] || []).push(d));
+    for (const aid of Object.keys(perApp)) {
+      let a = A.find(x => x.id === aid);
+      if (!a || a.stato === 'annullato') { const g = await getDoc(doc(dbA, 'appointments', aid)); a = g.exists() ? { id: g.id, ...g.data() } : null; }
+      const validi = a && a.stato !== 'annullato' ? new Set(blocchi(a)) : new Set();
+      perApp[aid].forEach(d => { if (!validi.has(d.id)) { daLiberare.push(d.ref); dettagli.push(d.id); } });
+    }
+    for (let i = 0; i < daLiberare.length; i += 400) { const b = writeBatch(dbA); daLiberare.slice(i, i + 400).forEach(r => b.delete(r)); await b.commit(); }
+    toast(daLiberare.length ? 'Liberati ' + daLiberare.length + ' blocchi da 5 minuti rimasti per errore' : 'Tutto in ordine: nessun orario bloccato per errore');
+    console.log('blocchi liberati', dettagli);
+  } catch (e) { console.error(e); toast('Non riesco a controllare gli orari. Riprova.'); }
+  btn.disabled = false;
+}
+
 /* Nuovo appuntamento manuale (telefono o negozio): nasce già confermato */
 function apriManuale() {
   let g = '', c = '';
@@ -789,7 +826,7 @@ $('#cBtn').onclick = () => conto() ? signOut(auth) : apriLogin();
 $('#invitoBtn').onclick = apriLogin;
 
 /* ===== Collegamenti ===== */
-$('#b1').onclick = () => { S.mese = oggiD(); S.mese.setDate(1); $('#slots').innerHTML = ''; renderCal(); vai(2); };
+$('#b1').onclick = () => { unsubBusy && unsubBusy(); unsubBusy = null; S.data = S.ora = null; S.mese = oggiD(); S.mese.setDate(1); $('#slots').innerHTML = ''; renderCal(); vai(2); };
 $('#b3').onclick = () => { renderRiep(); try { let d = JSON.parse(localStorage.getItem('mira_dati') || 'null'); if (!d && MIE.length) { const m = [...MIE].sort((p, q) => (q.creato || 0) - (p.creato || 0))[0]; d = { nome: m.nome, cognome: m.cognome, tel: m.tel }; } if (!d && conto() && U.displayName) { const w = U.displayName.trim().split(/\s+/); d = { nome: w[0], cognome: w.slice(1).join(' '), tel: '' }; } if (d) { if (!$('#fn').value) $('#fn').value = d.nome; if (!$('#fc').value) $('#fc').value = d.cognome; if (!$('#ft').value) $('#ft').value = d.tel; } } catch (e) {} vai(4); };
 $('#b4').onclick = invia;
 $('#b5').onclick = () => { renderMie(); vai('m'); };
@@ -812,6 +849,7 @@ $('#aSuono').onclick = () => {
   ctx.resume(); suono = !suono; $('#aSuono').textContent = suono ? '🔔 Suoni attivi' : '🔕 Attiva suoni'; if (suono) bip();
 };
 $('#aNuovo').onclick = apriManuale;
+$('#aRialli').onclick = riallinea;
 $('#aBadgeBtn').onclick = () => $('#pend').scrollIntoView({ behavior: 'smooth' });
 $('#dPrev').onclick = () => { const d = new Date(DATA + 'T00:00'); d.setDate(d.getDate() - 1); DATA = iso(d); renderAgenda(); };
 $('#dNext').onclick = () => { const d = new Date(DATA + 'T00:00'); d.setDate(d.getDate() + 1); DATA = iso(d); renderAgenda(); };
