@@ -680,6 +680,12 @@ async function muovi(a, op, data, ini) { // sposta e/o cambia operatrice; resta 
   b.update(doc(dbA, 'appointments', a.id), { data, op, inizio: ini, fine: fin, stato: 'confermato', spostato: true });
   await b.commit(); DATA = data;
 }
+/* Messaggio WhatsApp preimpostato: ricorda l'appuntamento (e gli altri trattamenti della stessa visita) */
+function msgWa(a, altri) {
+  const tutti = [a, ...altri].sort((p, q) => p.inizio - q.inizio);
+  const righe = tutti.map(x => hm(x.inizio) + ' ' + x.sv + ' (con ' + OPS[x.op] + ')').join('\n');
+  return 'Ciao ' + (a.nome || '') + '! 💗\nTi scriviamo da Mira – oltre l’estetica per ricordarti il tuo appuntamento di ' + dl(a.data) + ':\n' + righe + '\nCi confermi che ci sei? Grazie e a presto!';
+}
 async function renderDet() {
   const a = A.find(x => x.id === SEL), el = $('#det');
   if (!a) { el.hidden = true; return; }
@@ -690,7 +696,7 @@ async function renderDet() {
    <h3>${esc(a.sv)}</h3><span class="st ${stato[0]}">${stato[1]}</span>
    <p style="margin-top:10px"><b>${esc(dl(a.data))}</b>, ${hm(a.inizio)}–${hm(a.fine)} · ${OPS[a.op]}</p>
    <h4>Cliente</h4><p><b>${esc(a.nome)} ${esc(a.cognome)}</b><br>${esc(tel)}</p>
-   <div class="two"><a class="bt pri" href="tel:${esc(tel.replace(/[^\d+]/g, ''))}">Chiama</a><a class="bt" href="https://wa.me/${waNum(tel)}" target="_blank" rel="noopener">WhatsApp</a></div>
+   <div class="two"><a class="bt pri" href="tel:${esc(tel.replace(/[^\d+]/g, ''))}">Chiama</a><a class="bt" href="https://wa.me/${waNum(tel)}?text=${encodeURIComponent(msgWa(a, altri))}" target="_blank" rel="noopener">WhatsApp</a></div>
    <label>Note private<textarea id="dNote" placeholder="Allergie, preferenze…"></textarea></label><button class="bt" id="dSalva">Salva note</button>
    ${a.stato === 'attesa' ? '<div class="acts"><button class="bt ok" id="dConf">Conferma appuntamento</button></div>' : ''}
    ${a.stato !== 'annullato' ? `<h4>Sposta</h4><div class="rg"><input type="date" id="dSd" value="${a.data}"><input type="time" id="dSo" step="300" value="${hm(a.inizio)}"></div><div class="acts"><button class="bt" id="dSposta">Sposta</button></div>
