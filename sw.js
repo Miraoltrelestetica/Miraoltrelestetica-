@@ -1,5 +1,5 @@
 /* Mira – service worker. Cambia VERSIONE a ogni aggiornamento per far arrivare la nuova versione a tutte le clienti. */
-const VERSIONE = 'mira-v4';
+const VERSIONE = 'mira-v5';
 const FILE = ['./', 'index.html', 'manifest.webmanifest', 'logo.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'favicon-32.png'];
 
 self.addEventListener('install', e => {

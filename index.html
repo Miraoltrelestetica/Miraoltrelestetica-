@@ -642,7 +642,7 @@ function route() {
 addEventListener('hashchange', route);
 
 onAuthStateChanged(auth, async u => {
-  if (!u) { try { await signInAnonymously(auth); } catch (e) { console.error('accesso anonimo', e); $('#cErr').hidden = false; fineAvvio(); } return; }
+  if (!u) { try { await signInAnonymously(auth); } catch (e) { console.error('accesso anonimo', e); $('#cErr').textContent = 'Non riesco a collegarmi al sistema di prenotazione. Codice errore: ' + (e.code || e.message || 'sconosciuto'); $('#cErr').hidden = false; fineAvvio(); } return; }
   U = u; unsubM && unsubM(); unsubM = null;
   if (isAdmin()) { avviaAdmin(); } else { unsubA && unsubA(); unsubA = null; A = []; avviaCliente(); }
   $('#cErr').hidden = true;
