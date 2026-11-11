@@ -378,7 +378,7 @@ if('serviceWorker'in navigator)addEventListener('load',()=>navigator.serviceWork
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, signOut, linkWithPopup, linkWithCredential, signInWithPopup, signInWithCredential, GoogleAuthProvider, EmailAuthProvider, sendEmailVerification, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-auth.js";
-import { getFirestore, collection, doc, getDoc, getDocs, setDoc, writeBatch, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
+import { getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, writeBatch, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDTcwkZACdItzUVssEA7jDoKBmXMxFlpzQ",
@@ -701,10 +701,12 @@ async function muovi(a, op, data, ini) { // sposta e/o cambia operatrice; resta 
   await b.commit(); DATA = data;
 }
 /* Messaggio WhatsApp preimpostato: ricorda l'appuntamento (e gli altri trattamenti della stessa visita) */
+const linkInvito = (id, k) => location.origin + location.pathname + '#i=' + id + '.' + k;
 function msgWa(a, altri) {
   const tutti = [a, ...altri].sort((p, q) => p.inizio - q.inizio);
   const righe = tutti.map(x => hm(x.inizio) + ' ' + x.sv + ' (con ' + OPS[x.op] + ')').join('\n');
-  return 'Ciao ' + (a.nome || '') + '! 💗\nTi scriviamo da Mira – oltre l’estetica per ricordarti il tuo appuntamento di ' + dl(a.data) + ':\n' + righe + '\nCi confermi che ci sei? Grazie e a presto!';
+  const link = a.invito ? '\nPer vederlo nell’app, aggiungerlo al calendario o annullarlo apri questo link:\n' + linkInvito(a.id, a.invito) : '';
+  return 'Ciao ' + (a.nome || '') + '! 💗\nTi scriviamo da Mira – oltre l’estetica per ricordarti il tuo appuntamento di ' + dl(a.data) + ':\n' + righe + link + '\nCi confermi che ci sei? Grazie e a presto!';
 }
 async function renderDet() {
   const a = A.find(x => x.id === SEL), el = $('#det');
@@ -749,8 +751,9 @@ async function caricaClienti() {
   const M = {};
   sa.docs.forEach(d => {
     const x = d.data(), k = cifre(x.tel); if (!k) return;
-    const c = M[k] || (M[k] = { k, nome: x.nome, cognome: x.cognome, tel: x.tel, prima: x.data, ultimo: -1 });
+    const c = M[k] || (M[k] = { k, nome: x.nome, cognome: x.cognome, tel: x.tel, prima: x.data, ultimo: -1, uid: '', tUid: -1 });
     if (x.data < c.prima) c.prima = x.data;
+    if (x.uid && x.uid !== 'manuale' && (x.creato || 0) >= c.tUid) { c.tUid = x.creato || 0; c.uid = x.uid; } // dispositivo/account con cui ha già prenotato
     if ((x.creato || 0) >= c.ultimo) { c.ultimo = x.creato || 0; c.nome = x.nome; c.cognome = x.cognome; c.tel = x.tel; }
   });
   CLI = Object.values(M)
@@ -825,11 +828,19 @@ function apriManuale(cl) {
     if (occupatoA(op, data, ini, fin)) { err.textContent = OPS[op] + ' è già occupata in quell’orario.'; return; }
     err.textContent = ''; $('#mOk').disabled = true;
     try {
+      if (!CLI) { try { await caricaClienti(); } catch (e) { CLI = []; } }
+      const cl = CLI.find(x => x.k === cifre(tel)), uid = (cl && cl.uid) || 'manuale'; // se ha già prenotato dall’app, l’appuntamento le compare da solo
+      const tok = Array.from(crypto.getRandomValues(new Uint8Array(12)), x => x.toString(36).padStart(2, '0')).join('');
       const ref = doc(collection(dbA, 'appointments')), b = writeBatch(dbA);
-      b.set(ref, { uid: 'manuale', gruppo: ref.id, nome, cognome, tel, sv: sv.nome, op, data, inizio: ini, fine: fin, stato: 'confermato', creato: Date.now(), manuale: true });
-      blocchi({ op, data, inizio: ini, fine: fin }).forEach(id => b.set(doc(dbA, 'busy', id), { data, op, m: +id.split('_')[2], aid: ref.id, uid: 'manuale' }));
+      b.set(ref, { uid, gruppo: ref.id, nome, cognome, tel, sv: sv.nome, op, data, inizio: ini, fine: fin, stato: 'confermato', creato: Date.now(), manuale: true, invito: tok });
+      blocchi({ op, data, inizio: ini, fine: fin }).forEach(id => b.set(doc(dbA, 'busy', id), { data, op, m: +id.split('_')[2], aid: ref.id, uid }));
       b.set(doc(dbA, 'clienti', cifre(tel)), { nome, cognome, tel }, { merge: true });
-      await b.commit(); CLI = null; DATA = data; $('#man').hidden = true; toast('Appuntamento salvato'); vistaClienti(false); renderAgenda();
+      await b.commit(); CLI = null; DATA = data; vistaClienti(false); renderAgenda();
+      const wa = 'Ciao ' + nome + '! 💗\nTi confermiamo il tuo appuntamento da Mira – oltre l’estetica:\n' + dl(data) + ', ore ' + hm(ini) + ' · ' + sv.nome + ' (con ' + OPS[op] + ')\nPer vederlo nell’app, aggiungerlo al calendario o annullarlo apri questo link:\n' + linkInvito(ref.id, tok) + '\nA presto!';
+      $('#man').innerHTML = `<div class="dc"><h3>Appuntamento salvato ✓</h3><p><b>${esc(nome)} ${esc(cognome)}</b><br>${esc(dl(data))}, ${hm(ini)} · ${esc(sv.nome)} · ${OPS[op]}</p>
+       <p class="hint">Avvisa la cliente: il messaggio contiene i dettagli e il link per vederlo nell’app.</p>
+       <div class="acts"><a class="bt pri" href="https://wa.me/${waNum(tel)}?text=${encodeURIComponent(wa)}" target="_blank" rel="noopener">Invia su WhatsApp</a><button class="bt" id="mFatto">Fatto</button></div></div>`;
+      $('#mFatto').onclick = () => { $('#man').hidden = true; };
     } catch (e) { console.error(e); err.textContent = e.code === 'permission-denied' ? 'Orario occupato o permessi mancanti.' : 'Non riesco a salvare. Riprova.'; $('#mOk').disabled = false; }
   };
 }
@@ -932,10 +943,17 @@ function route() {
   if (adm && isAdmin()) renderAdmin(); else if (!adm) document.title = 'Mira – oltre l’estetica';
 }
 addEventListener('hashchange', route);
+let INV = null; // link personale ricevuto dalla titolare: #i=idAppuntamento.codice
+{ const m = /^#i=([A-Za-z0-9]+)\.([a-z0-9]+)$/.exec(location.hash); if (m) { INV = [m[1], m[2]]; history.replaceState(null, '', location.pathname + location.search); } }
+async function riscatta() {
+  const [aid, k] = INV; INV = null;
+  try { await updateDoc(doc(db, 'appointments', aid), { uid: U.uid, invito: '', prova: k }); toast('Appuntamento aggiunto alle tue prenotazioni 💗'); renderMie(); vai('m'); }
+  catch (e) { console.error(e); toast('Questo link non è più valido: forse l’hai già aperto. Controlla “Le mie prenotazioni”.'); }
+}
 
 onAuthStateChanged(auth, async u => { // cliente
   if (!u) { try { await signInAnonymously(auth); } catch (e) { console.error('accesso anonimo', e); $('#cErr').textContent = 'Non riesco a collegarmi al sistema di prenotazione. Codice errore: ' + (e.code || e.message || 'sconosciuto'); $('#cErr').hidden = false; fineAvvio(); } return; }
-  U = u; $('#cErr').hidden = true; aggiornaConto(); avviaCliente(); fineAvvio();
+  U = u; $('#cErr').hidden = true; aggiornaConto(); avviaCliente(); fineAvvio(); if (INV) riscatta();
 });
 onAuthStateChanged(authA, u => { // titolare
   UA = u;
