@@ -262,7 +262,21 @@ h2{font-size:2rem}
 .mt.sm b{font-weight:700;font-size:.82rem;line-height:1.15}
 .mt .mn{position:absolute;top:10px;right:10px;min-width:24px;height:24px;padding:0 7px;border-radius:99px;background:var(--ink);color:#fff;font-weight:700;font-size:.8rem;display:grid;place-items:center}
 .mt .mn:empty{display:none}
-@media(min-width:820px){.menu{max-width:760px}}
+@media(min-width:900px){
+ .tile{aspect-ratio:auto;min-height:170px;border-radius:30px}
+ #pl,#po{max-width:820px}
+ .hero:not([hidden]){display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.8fr);column-gap:48px;align-items:end;padding:26px 0 18px}
+ .hero:not([hidden]) #cChi{grid-column:1;margin:0}
+ .hero:not([hidden]) h1{grid-column:1;max-width:12ch;font-size:clamp(3rem,4.6vw,4.6rem)}
+ .hero:not([hidden]) .sub{grid-column:1;max-width:40ch}
+ .hero:not([hidden]) .arcs{grid-column:2;grid-row:1/span 3;max-width:none;margin:0}
+ .hero:not([hidden]) .arcs i{height:150px!important}.hero:not([hidden]) .arcs i:nth-child(2){height:230px!important}
+ .menu{max-width:none;gap:16px}
+ .mt.big{aspect-ratio:auto;min-height:190px;padding:24px;border-radius:36px}
+ .mt.big b{font-size:1.7rem}
+ .mt.sm{aspect-ratio:auto;min-height:130px;padding:20px;border-radius:28px}
+ .mt.sm svg{width:38px;height:38px}.mt.sm b{font-size:1rem}
+}
 .lcat{margin:0 0 26px}
 .lcat h3{font-size:1.6rem;margin:0 0 6px}
 .lrow{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 2px;border-bottom:1px solid var(--line)}
@@ -874,6 +888,8 @@ function renderAdmin() {
   $('#pend').innerHTML = attesa.length ? attesa.map(x => `<div class="pend"><b>${esc(x.nome)} ${esc(x.cognome)}</b><small>${esc(x.sv)} · ${OPS[x.op]}</small><small>${esc(dl(x.data))}, ${hm(x.inizio)}–${hm(x.fine)}</small><div class="acts"><button class="bt ok" data-conf="${x.id}">Conferma</button><button class="bt" data-apri="${x.id}">Apri</button></div></div>`).join('') : '<p class="hint">Nessuna prenotazione in attesa.</p>';
   $$('#pend [data-conf]').forEach(b => b.onclick = () => conferma(b.dataset.conf));
   $$('#pend [data-apri]').forEach(b => b.onclick = () => { const a = A.find(x => x.id === b.dataset.apri); if (a) { DATA = a.data; apri(a.id); renderAgenda(); } });
+  $$('#pend .pend, #annList .pend').forEach(c => { const b = c.querySelector('[data-apri]'); if (!b) return; c.style.cursor = 'pointer'; c.onclick = e => { if (e.target.closest('button')) return; const a = A.find(x => x.id === b.dataset.apri); if (a) { DATA = a.data; apri(a.id); renderAgenda(); } }; });
+
   renderAgenda();
   if (SEL) { const el = $('#det'); if (!el.contains(document.activeElement)) renderDet(); }
 }
@@ -1289,7 +1305,12 @@ $('#aSuono').onclick = () => {
 $('#aNuovo').onclick = () => apriManuale();
 $('#cQ').oninput = e => { CQ = e.target.value; if (CLI) renderClienti(); };
 $$('#atabs button').forEach(b => b.onclick = () => vistaAdmin(b.dataset.v));
-$('#aBadgeBtn').onclick = () => ($('#annBox').hidden ? $('#pend') : $('#annBox')).scrollIntoView({ behavior: 'smooth' });
+$('#aBadgeBtn').onclick = () => { // porta alla lista "Da confermare", da qualunque scheda dell’area privata
+  if ($('.agrid').hidden) vistaAdmin('agenda');
+  if (SEL) { SEL = null; $('#det').hidden = true; renderAgenda(); }
+  const t = $('#pend').previousElementSibling || $('#pend'); t.style.scrollMarginTop = '72px';
+  setTimeout(() => t.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+};
 $('#dPrev').onclick = () => { const d = new Date(DATA + 'T00:00'); d.setDate(d.getDate() - 1); DATA = iso(d); renderAgenda(); };
 $('#dNext').onclick = () => { const d = new Date(DATA + 'T00:00'); d.setDate(d.getDate() + 1); DATA = iso(d); renderAgenda(); };
 $('#dOggi').onclick = () => { DATA = iso(oggiD()); renderAgenda(); };
