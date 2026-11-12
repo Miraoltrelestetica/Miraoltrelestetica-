@@ -1069,7 +1069,7 @@ function renderImp() {
      <details data-i="${i}" ${APERTI.has(String(i)) ? 'open' : ''}><summary>Giorni e orari di lavoro</summary>${giorni}</details>
      <h4>Ferie e assenze</h4>${ferie || '<p class="hint" style="margin:0 0 8px">Nessuna assenza programmata.</p>'}<button class="bt sm" data-f="fe-add" data-i="${i}">+ Aggiungi ferie</button></div>`; }).join('');
   const cat = d.cat.map((c, ci) => `<div class="dc impc"><div class="ihead"><label class="grow">Categoria<input data-f="cat-nome" data-c="${ci}" value="${esc(c.nome)}" maxlength="40"></label><button class="bt no sm" data-f="cat-del" data-c="${ci}">Elimina categoria</button></div>` +
-    c.servizi.map((v, si) => `<div class="svr"><div class="ihead"><label class="grow">Trattamento<input data-f="sv-nome" data-c="${ci}" data-s="${si}" value="${esc(v.nome)}" maxlength="60"></label><label class="min">Minuti<input type="number" inputmode="numeric" min="5" max="480" step="5" data-f="sv-min" data-c="${ci}" data-s="${si}" value="${v.min}"></label></div>
+    c.servizi.map((v, si) => `<div class="svr"><div class="ihead"><label class="grow">Trattamento<input data-f="sv-nome" data-c="${ci}" data-s="${si}" value="${esc(v.nome)}" maxlength="60"></label><label class="min">Minuti<input type="number" inputmode="numeric" min="5" max="480" step="5" data-f="sv-min" data-c="${ci}" data-s="${si}" value="${v.min}"></label><label class="min">Prezzo €<input data-f="sv-prezzo" data-c="${ci}" data-s="${si}" value="${esc(v.prezzo || '')}" maxlength="12" inputmode="decimal" placeholder="—"></label></div>
       <div class="chips"><small>Lo fanno:</small>${d.ops.map(o => `<label class="cks"><input type="checkbox" data-f="sv-op" data-c="${ci}" data-s="${si}" data-o="${esc(o.id)}" ${v.ops.includes(o.id) ? 'checked' : ''}><span>${esc(o.nome)}${o.attiva ? '' : ' (non in servizio)'}</span></label>`).join('')}</div>
       <button class="bt no sm" data-f="sv-del" data-c="${ci}" data-s="${si}">Elimina trattamento</button></div>`).join('') +
     `<button class="bt sm" data-f="sv-add" data-c="${ci}">+ Aggiungi trattamento</button></div>`).join('');
@@ -1078,9 +1078,8 @@ function renderImp() {
    <div class="orr"><label class="grow">Massimo di prenotazioni per cliente nello stesso giorno<select data-f="max-g">${[0, 1, 2, 3, 4, 5].map(v => `<option value="${v}" ${d.maxGiorno === v ? 'selected' : ''}>${v === 0 ? 'Nessun limite' : v}</option>`).join('')}${d.maxGiorno > 5 ? `<option value="${d.maxGiorno}" selected>${d.maxGiorno}</option>` : ''}</select></label></div>
    <p class="hint" style="margin:6px 0 0">Una prenotazione può comprendere più trattamenti. Il limite vale quando la cliente prenota dall’app; tu da “Nuovo appuntamento” puoi sempre inserire quello che vuoi.</p></div>
    <h3>Orari del salone</h3><div class="dc impc">${sal}</div>
-   <h3>Operatrici</h3>${ops}<button class="bt" data-f="op-add">+ Nuova operatrice</button>
-   <h3>Listino prezzi</h3><div class="dc impc"><p class="hint" style="margin:0 0 8px">Il prezzo che le clienti vedono nel “Listino” dell’app. Scrivi solo il numero (es. 25) oppure un testo (es. “da 25”). Lascia vuoto per non mostrarlo.</p>${d.cat.map((c, ci) => c.servizi.length ? `<h4 style="margin:14px 0 4px">${esc(c.nome)}</h4>` + c.servizi.map((v, si) => `<div class="orr"><span class="grow" style="flex:1 1 160px">${esc(v.nome)}</span><span class="trt">€<input data-f="sv-prezzo" data-c="${ci}" data-s="${si}" value="${esc(v.prezzo || '')}" maxlength="12" inputmode="decimal" placeholder="—" style="width:110px"></span></div>`).join('') : '').join('')}</div>
-   <h3>Trattamenti</h3>${cat}<button class="bt" data-f="cat-add">+ Nuova categoria</button></div>`;
+   <h3>Operatrici</h3><p class="hint">Una nuova operatrice segue gli orari del salone finché non le imposti orari suoi. Per toglierla dalle prenotazioni deseleziona “In servizio”: gli appuntamenti passati restano con il suo nome.</p>${ops}<button class="bt" data-f="op-add">+ Nuova operatrice</button>
+   <h3>Listino e trattamenti</h3><p class="hint">Qui gestisci tutto quello che le clienti vedono nell’app: categorie, trattamenti, durata e prezzo. Per il prezzo scrivi il numero (es. 25) o un testo (es. “da 25”); vuoto = non mostrato. Aggiungi o togli categorie e trattamenti quando vuoi.</p>${cat}<button class="bt" data-f="cat-add">+ Nuova categoria</button></div>`;
 }
 async function impEv(e) {
   const t = e.target, f = t.dataset && t.dataset.f; if (!f || !DR) return;
@@ -1103,7 +1102,7 @@ async function impEv(e) {
     case 'fe-da': op.ferie[j].da = val; break;
     case 'fe-a': op.ferie[j].a = val; break;
     case 'fe-del': op.ferie.splice(j, 1); ri = true; break;
-    case 'op-add': DR.ops.push({ id: 'o' + Date.now().toString(36), nome: 'Nuova operatrice', attiva: true, orari: {}, ferie: [] }); ri = true; break;
+    case 'op-add': { const id = 'o' + Date.now().toString(36); DR.ops.push({ id, nome: 'Nuova operatrice', attiva: true, orari: {}, ferie: [] }); DR.cat.forEach(c => c.servizi.forEach(v => v.ops.push(id))); ri = true; toast('Operatrice aggiunta a tutti i trattamenti: togli la spunta dove non serve'); break; }
     case 'cat-nome': cat.nome = val; break;
     case 'cat-add': DR.cat.push({ nome: 'Nuova categoria', servizi: [] }); ri = true; break;
     case 'cat-del': if (cat.servizi.length && !await chiedi('Eliminare la categoria?', '“' + cat.nome + '” e i suoi ' + cat.servizi.length + ' trattamenti spariranno dal sito. Gli appuntamenti già fissati restano in agenda.', 'Sì, elimina', 'No', true)) return; DR.cat.splice(c, 1); ri = true; break;
