@@ -1061,16 +1061,17 @@ function renderImp() {
     return `<div class="orr"><label class="cks"><input type="checkbox" data-f="sal-on" data-w="${w}" ${r ? 'checked' : ''}><b>${GIORNI[w]}</b></label>` +
       (r ? `<span class="trt"><input type="time" step="300" data-f="sal-da" data-w="${w}" value="${tm(r[0])}"><i>–</i><input type="time" step="300" data-f="sal-a" data-w="${w}" value="${tm(r[1])}"></span>` : '<span class="hint" style="margin:0">Chiuso</span>') + '</div>'; }).join('');
   const ops = d.ops.map((o, i) => {
+    if (o.eliminata) return '';
     const giorni = ORD.map(w => { const m = o.orari[w], mod = m === undefined || m === null ? 'sal' : rng(m) ? 'cus' : 'off', rs = rng(d.apertura[w]);
       return `<div class="orr"><b>${GIORNI[w]}</b><select data-f="op-mod" data-i="${i}" data-w="${w}"><option value="sal" ${mod === 'sal' ? 'selected' : ''}>Come il salone${rs ? ' (' + tm(rs[0]) + '–' + tm(rs[1]) + ')' : ' (chiuso)'}</option><option value="cus" ${mod === 'cus' ? 'selected' : ''}>Orario personalizzato</option><option value="off" ${mod === 'off' ? 'selected' : ''}>Non lavora</option></select>` +
         (mod === 'cus' ? `<span class="trt"><input type="time" step="300" data-f="op-da" data-i="${i}" data-w="${w}" value="${tm(m.da)}"><i>–</i><input type="time" step="300" data-f="op-a" data-i="${i}" data-w="${w}" value="${tm(m.a)}"></span>` : '') + '</div>'; }).join('');
     const ferie = o.ferie.map((f, j) => `<div class="orr"><span class="trt"><input type="date" data-f="fe-da" data-i="${i}" data-j="${j}" value="${esc(f.da)}"><i>→</i><input type="date" data-f="fe-a" data-i="${i}" data-j="${j}" value="${esc(f.a)}"></span><button class="bt no sm" data-f="fe-del" data-i="${i}" data-j="${j}">Togli</button></div>`).join('');
-    return `<div class="dc impc"><div class="ihead"><label class="grow">Nome<input data-f="op-nome" data-i="${i}" value="${esc(o.nome)}" maxlength="30"></label><label class="cks"><input type="checkbox" data-f="op-att" data-i="${i}" ${o.attiva ? 'checked' : ''}><span>In servizio</span></label></div>
+    return `<div class="dc impc"><div class="ihead"><label class="grow">Nome<input data-f="op-nome" data-i="${i}" value="${esc(o.nome)}" maxlength="30"></label><label class="cks"><input type="checkbox" data-f="op-att" data-i="${i}" ${o.attiva ? 'checked' : ''}><span>In servizio</span></label><button class="bt no sm" data-f="op-del" data-i="${i}">Elimina operatrice</button></div>
      <details data-i="${i}" ${APERTI.has(String(i)) ? 'open' : ''}><summary>Giorni e orari di lavoro</summary>${giorni}</details>
      <h4>Ferie e assenze</h4>${ferie || '<p class="hint" style="margin:0 0 8px">Nessuna assenza programmata.</p>'}<button class="bt sm" data-f="fe-add" data-i="${i}">+ Aggiungi ferie</button></div>`; }).join('');
   const cat = d.cat.map((c, ci) => `<div class="dc impc"><div class="ihead"><label class="grow">Categoria<input data-f="cat-nome" data-c="${ci}" value="${esc(c.nome)}" maxlength="40"></label><button class="bt no sm" data-f="cat-del" data-c="${ci}">Elimina categoria</button></div>` +
     c.servizi.map((v, si) => `<div class="svr"><div class="ihead"><label class="grow">Trattamento<input data-f="sv-nome" data-c="${ci}" data-s="${si}" value="${esc(v.nome)}" maxlength="60"></label><label class="min">Minuti<input type="number" inputmode="numeric" min="5" max="480" step="5" data-f="sv-min" data-c="${ci}" data-s="${si}" value="${v.min}"></label><label class="min">Prezzo €<input data-f="sv-prezzo" data-c="${ci}" data-s="${si}" value="${esc(v.prezzo || '')}" maxlength="12" inputmode="decimal" placeholder="—"></label></div>
-      <div class="chips"><small>Lo fanno:</small>${d.ops.map(o => `<label class="cks"><input type="checkbox" data-f="sv-op" data-c="${ci}" data-s="${si}" data-o="${esc(o.id)}" ${v.ops.includes(o.id) ? 'checked' : ''}><span>${esc(o.nome)}${o.attiva ? '' : ' (non in servizio)'}</span></label>`).join('')}</div>
+      <div class="chips"><small>Lo fanno:</small>${d.ops.filter(o => !o.eliminata).map(o => `<label class="cks"><input type="checkbox" data-f="sv-op" data-c="${ci}" data-s="${si}" data-o="${esc(o.id)}" ${v.ops.includes(o.id) ? 'checked' : ''}><span>${esc(o.nome)}${o.attiva ? '' : ' (non in servizio)'}</span></label>`).join('')}</div>
       <button class="bt no sm" data-f="sv-del" data-c="${ci}" data-s="${si}">Elimina trattamento</button></div>`).join('') +
     `<button class="bt sm" data-f="sv-add" data-c="${ci}">+ Aggiungi trattamento</button></div>`).join('');
   $('#iBody').innerHTML = `<div class="imp"><h2>Impostazioni</h2><p class="hint">Le modifiche valgono per tutte le clienti appena premi “Salva impostazioni”. Gli appuntamenti già fissati restano dove sono: se finiscono fuori orario li vedi segnalati in agenda.</p>
@@ -1078,7 +1079,7 @@ function renderImp() {
    <div class="orr"><label class="grow">Massimo di prenotazioni per cliente nello stesso giorno<select data-f="max-g">${[0, 1, 2, 3, 4, 5].map(v => `<option value="${v}" ${d.maxGiorno === v ? 'selected' : ''}>${v === 0 ? 'Nessun limite' : v}</option>`).join('')}${d.maxGiorno > 5 ? `<option value="${d.maxGiorno}" selected>${d.maxGiorno}</option>` : ''}</select></label></div>
    <p class="hint" style="margin:6px 0 0">Una prenotazione può comprendere più trattamenti. Il limite vale quando la cliente prenota dall’app; tu da “Nuovo appuntamento” puoi sempre inserire quello che vuoi.</p></div>
    <h3>Orari del salone</h3><div class="dc impc">${sal}</div>
-   <h3>Operatrici</h3><p class="hint">Una nuova operatrice segue gli orari del salone finché non le imposti orari suoi. Per toglierla dalle prenotazioni deseleziona “In servizio”: gli appuntamenti passati restano con il suo nome.</p>${ops}<button class="bt" data-f="op-add">+ Nuova operatrice</button>
+   <h3>Operatrici</h3><p class="hint">Una nuova operatrice segue gli orari del salone finché non le imposti orari suoi. Con “In servizio” spento la metti in pausa; con “Elimina operatrice” la togli del tutto. Gli appuntamenti passati restano con il suo nome.</p>${ops}<button class="bt" data-f="op-add">+ Nuova operatrice</button>
    <h3>Listino e trattamenti</h3><p class="hint">Qui gestisci tutto quello che le clienti vedono nell’app: categorie, trattamenti, durata e prezzo. Per il prezzo scrivi il numero (es. 25) o un testo (es. “da 25”); vuoto = non mostrato. Aggiungi o togli categorie e trattamenti quando vuoi.</p>${cat}<button class="bt" data-f="cat-add">+ Nuova categoria</button></div>`;
 }
 async function impEv(e) {
@@ -1102,6 +1103,9 @@ async function impEv(e) {
     case 'fe-da': op.ferie[j].da = val; break;
     case 'fe-a': op.ferie[j].a = val; break;
     case 'fe-del': op.ferie.splice(j, 1); ri = true; break;
+    case 'op-del': { const oggi = iso(oggiD()), n = A.filter(x => x.op === op.id && x.stato !== 'annullato' && x.data >= oggi).length;
+      if (!await chiedi('Eliminare l’operatrice?', '“' + op.nome + '” non sarà più prenotabile e sparirà dalle impostazioni.' + (n ? ' Ha ancora ' + n + ' appuntamenti da oggi in poi: restano in agenda con il suo nome, ma conviene spostarli o annullarli.' : ' Gli appuntamenti passati restano in agenda con il suo nome.'), 'Sì, elimina', 'No', true)) return;
+      op.eliminata = true; op.attiva = false; DR.cat.forEach(c => c.servizi.forEach(v => { v.ops = v.ops.filter(x => x !== op.id); })); ri = true; break; }
     case 'op-add': { const id = 'o' + Date.now().toString(36); DR.ops.push({ id, nome: 'Nuova operatrice', attiva: true, orari: {}, ferie: [] }); DR.cat.forEach(c => c.servizi.forEach(v => v.ops.push(id))); ri = true; toast('Operatrice aggiunta a tutti i trattamenti: togli la spunta dove non serve'); break; }
     case 'cat-nome': cat.nome = val; break;
     case 'cat-add': DR.cat.push({ nome: 'Nuova categoria', servizi: [] }); ri = true; break;
@@ -1120,6 +1124,7 @@ function validaImp(d) {
   const nomi = new Set(), ora5 = m => Number.isInteger(m) && m % 5 === 0;
   if (!d.ops.some(o => o.attiva)) return 'Serve almeno un’operatrice in servizio.';
   for (const o of d.ops) {
+    if (o.eliminata) continue;
     const n = o.nome.trim().toLowerCase(); if (!n) return 'Ogni operatrice deve avere un nome.'; if (nomi.has(n)) return 'Due operatrici hanno lo stesso nome: “' + o.nome + '”.'; nomi.add(n);
     for (const w of ORD) { const m = o.orari[w]; if (m && m.a > m.da && (!ora5(m.da) || !ora5(m.a))) return 'Gli orari di ' + o.nome + ' devono essere multipli di 5 minuti.'; }
     for (const f of o.ferie) { if (!f.da || !f.a) return 'Completa le date delle ferie di ' + o.nome + '.'; if (f.a < f.da) return 'Nelle ferie di ' + o.nome + ' la data finale è prima di quella iniziale.'; }
